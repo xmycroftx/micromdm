@@ -1,0 +1,28 @@
+package: github.com/micromdm/micromdm
+import:
+- package: github.com/garyburd/redigo
+  subpackages:
+  - redis
+- package: github.com/go-kit/kit
+  subpackages:
+  - endpoint
+  - log
+  - metrics
+  - metrics/prometheus
+  - transport/http
+- package: github.com/gorilla/mux
+- package: github.com/groob/plist
+- package: github.com/jmoiron/sqlx
+- package: github.com/lib/pq
+- package: github.com/micromdm/mdm
+- package: github.com/micromdm/micromdm
+  subpackages:
+  - checkin
+  - command
+  - device
+- package: github.com/prometheus/client_golang
+  subpackages:
+  - prometheus
+- package: golang.org/x/net
+  subpackages:
+  - context

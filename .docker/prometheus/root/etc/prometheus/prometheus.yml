@@ -1,0 +1,13 @@
+global:
+  scrape_interval:     15s 
+  evaluation_interval: 15s 
+  external_labels:
+    monitor: 'micromdm'
+
+scrape_configs:
+  - job_name: 'micromdm'
+    scrape_interval: 5s
+    scrape_timeout: 10s
+    target_groups:
+      - targets: ['micromdm']
+

@@ -1,0 +1,60 @@
+haproxy:
+    build: haproxy/
+    restart: always
+    ports:
+        - "80:80"
+        - "443:443"
+    volumes_from:
+        - data
+    links:
+        - micromdm
+        - pkgrepo
+        - prometheus
+
+micromdm:
+    build: ../
+    dockerfile: Dockerfile.dev
+    command: "/micromdm -tls=false"
+    expose:
+        - "80"
+    links:
+        - postgres
+        - redis
+
+postgres:
+    image: postgres
+    restart: always
+    environment:
+        - POSTGRES_USER=micromdm
+        - POSTGRES_PASSWORD=micromdm
+        - POSTGRES_DB=micromdm
+        - SSLMODE=disable
+    expose:
+        - "5432"
+
+prometheus:
+    build: prometheus/
+    ports:
+        - "9090:9090"
+    links:
+        - micromdm
+
+redis:
+    image: redis
+    restart: always
+    expose:
+        - "6379"
+
+pkgrepo:
+    build: pkgr/ 
+    expose:
+        - "80"
+    volumes_from:
+        - data
+
+
+data:
+    build: data/
+    volumes:
+        - /certs.d
+        - /pkgrepo
