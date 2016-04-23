@@ -1,3 +1,4 @@
 vendor/
 .docker/data/root/
 micromdm
+.k8/
