@@ -9,7 +9,7 @@ haproxy:
     links:
         - micromdm
         - pkgrepo
-        - prometheus
+        # - prometheus
 
 micromdm:
     build: ../
@@ -17,6 +17,8 @@ micromdm:
     command: "/micromdm -tls=false"
     expose:
         - "80"
+    volumes_from:
+        - data
     links:
         - postgres
         - redis
@@ -32,12 +34,12 @@ postgres:
     expose:
         - "5432"
 
-prometheus:
-    build: prometheus/
-    ports:
-        - "9090:9090"
-    links:
-        - micromdm
+# prometheus:
+#     build: prometheus/
+#     ports:
+#         - "9090:9090"
+#     links:
+#         - micromdm
 
 redis:
     image: redis
@@ -51,7 +53,6 @@ pkgrepo:
         - "80"
     volumes_from:
         - data
-
 
 data:
     build: data/

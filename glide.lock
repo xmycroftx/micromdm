@@ -1,5 +1,5 @@
 hash: 8fe304e9385e4fbe963eba356a9784b3217ae75b65f50178322a7e1e41950e8d
-updated: 2016-04-24T01:39:00.276772505-04:00
+updated: 2016-04-24T10:56:48.110433681-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -13,7 +13,7 @@ imports:
   - redis
   - internal
 - name: github.com/go-kit/kit
-  version: ee4f2fa8fb2c0cfba4b54cad5764c4d0c0e60907
+  version: 5dbf809170724bbe74545ef9492328c456294259
   subpackages:
   - endpoint
   - log
@@ -45,11 +45,11 @@ imports:
   subpackages:
   - oid
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: 3247c84500bff8d9fb6d579d800f20b3e091582c
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/micromdm/mdm
-  version: 5b8de364af08f1e39d5f51d22fcba04642952526
+  version: d64bbc40594da804b956062912d62453cad70459
 - name: github.com/prometheus/client_golang
   version: 90c15b5efa0dc32a7d259234e02ac9a99e6d3b82
   subpackages:

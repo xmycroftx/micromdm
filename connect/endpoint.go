@@ -13,6 +13,10 @@ var ErrInvalidMessageType = errors.New("Invalid MessageType")
 func makeConnectEndpoint(svc MDMConnectService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(mdmConnectRequest)
+		if req.UserID != nil {
+			// don't handle user
+			return mdmConnectResponse{}, nil
+		}
 		var err error
 		switch req.Status {
 		case "Acknowledged":
