@@ -182,7 +182,7 @@ func (db pgDatastore) SaveDevice(dev *Device) error {
 // GetProfileForDevice returns an enrollment profile for a specific device
 // For now there's a single profile stored on disk
 func (db pgDatastore) GetProfileForDevice(uuid string) (*Profile, error) {
-	data, err := ioutil.ReadFile("data/profiles/Enrollment.mobileconfig")
+	data, err := ioutil.ReadFile("/profiles/Enroll.mobileconfig")
 	if err != nil {
 		return nil, err
 	}

@@ -58,3 +58,4 @@ data:
     volumes:
         - /certs.d
         - /pkgrepo
+        - /profiles
