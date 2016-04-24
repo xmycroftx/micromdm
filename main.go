@@ -119,7 +119,7 @@ func main() {
 
 	// router
 	r := mux.NewRouter()
-	r.Methods("PUT").Path("/mdm/checkin").Handler(checkinHandler)
+	r.Methods("PUT", "POST").Path("/mdm/checkin").Handler(checkinHandler)
 	r.Methods("PUT").Path("/mdm/connect").Handler(connectHandler)
 	r.Handle("/mdm/commands", commandHandler)
 	r.Methods("POST").Path("/mdm/commands").Handler(commandHandler)

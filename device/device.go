@@ -3,6 +3,7 @@ package device
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -36,6 +37,10 @@ type Device struct {
 	Enrolled              *bool   `json:"enrolled,omitempty" db:"mdm_enrolled,omitempty"`
 }
 
+// Profile is an Enrollment profile.
+// For now we just have one.
+type Profile []byte
+
 // Datastore manages interactions of devices in a database
 type Datastore interface {
 	AddDevice(*Device) error
@@ -43,6 +48,7 @@ type Datastore interface {
 	SaveDevice(*Device) error
 	// RemoveDevice() error
 	// AllDevices() DeviceList,error
+	GetProfileForDevice(udid string) (*Profile, error)
 }
 
 type config struct {
@@ -171,6 +177,17 @@ func (db pgDatastore) SaveDevice(dev *Device) error {
 		return ErrNoRowsModified
 	}
 	return nil
+}
+
+// GetProfileForDevice returns an enrollment profile for a specific device
+// For now there's a single profile stored on disk
+func (db pgDatastore) GetProfileForDevice(uuid string) (*Profile, error) {
+	data, err := ioutil.ReadFile("data/profiles/Enrollment.mobileconfig")
+	if err != nil {
+		return nil, err
+	}
+	profile := Profile(data)
+	return &profile, nil
 }
 
 func migrate(db *sqlx.DB) {

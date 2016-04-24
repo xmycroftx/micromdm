@@ -1,15 +1,37 @@
 package checkin
 
 import (
+	"io/ioutil"
 	"log"
 	"net/http"
 
+	"github.com/fullsailor/pkcs7"
 	"github.com/groob/plist"
 )
 
 func decodeMDMCheckinRequest(r *http.Request) (interface{}, error) {
 	var request mdmCheckinRequest
 	if err := plist.NewDecoder(r.Body).Decode(&request); err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
+// The enrollment request is PkCS7 signed.
+// We'll ignore everything but the content for now
+func decodeMDMEnrollmentRequest(r *http.Request) (interface{}, error) {
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	p7, err := pkcs7.Parse(data)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: We should verify but not currently possible. Apple
+	// does no provide a cert for the CA.
+	var request depEnrollmentRequest
+	if err := plist.Unmarshal(p7.Content, &request); err != nil {
 		return nil, err
 	}
 	return request, nil
@@ -37,6 +59,18 @@ func encodeResponse(w http.ResponseWriter, response interface{}) error {
 	enc := plist.NewEncoder(w)
 	enc.Indent("  ")
 	return enc.Encode(response)
+}
+
+func enrollResponse(w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(errorer); ok && e.error() != nil {
+		// Not a Go kit transport error, but a business-logic error.
+		// Provide those as HTTP errors.
+		encodeError(w, e.error())
+		return nil
+	}
+	resp := response.(depEnrollmentResponse)
+	w.Write(resp.Profile)
+	return nil
 }
 
 func encodeError(w http.ResponseWriter, err error) {

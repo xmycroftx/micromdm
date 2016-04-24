@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/metrics"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/mux"
 	"github.com/micromdm/mdm"
 	"github.com/micromdm/micromdm/device"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
@@ -25,6 +26,7 @@ type MDMCheckinService interface {
 	Authenticate(mdm.CheckinCommand) error
 	TokenUpdate(mdm.CheckinCommand) error
 	Checkout(mdm.CheckinCommand) error
+	Enroll(udid string) (*device.Profile, error)
 }
 
 // NewCheckinService creates a new MDM Checkin Service
@@ -121,7 +123,19 @@ func (svc mdmCheckinService) Checkout(cmd mdm.CheckinCommand) error {
 		return err
 	}
 	existing.Enrolled = boolPtr(false)
+	err = svc.db.SaveDevice(existing)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (svc mdmCheckinService) Enroll(udid string) (*device.Profile, error) {
+	profile, err := svc.db.GetProfileForDevice(udid)
+	if err != nil {
+		return nil, err
+	}
+	return profile, nil
 }
 
 // return a pointer to a boolean
@@ -141,5 +155,18 @@ func ServiceHandler(ctx context.Context, svc MDMCheckinService) http.Handler {
 		decodeMDMCheckinRequest,
 		encodeResponse,
 	)
-	return checkinHandler
+
+	enroll := makeEnrollmentEndpoint(svc)
+
+	enrollmentHandler := httptransport.NewServer(
+		ctx,
+		enroll,
+		decodeMDMEnrollmentRequest,
+		enrollResponse,
+	)
+
+	r := mux.NewRouter()
+	r.Methods("PUT").Path("/mdm/checkin").Handler(checkinHandler)
+	r.Methods("POST").Path("/mdm/checkin").Handler(enrollmentHandler)
+	return r
 }

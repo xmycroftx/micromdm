@@ -25,3 +25,14 @@ func makeCheckinEndpoint(svc MDMCheckinService) endpoint.Endpoint {
 		return mdmCheckinResponse{}, nil
 	}
 }
+
+func makeEnrollmentEndpoint(svc MDMCheckinService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(depEnrollmentRequest)
+		profile, err := svc.Enroll(req.DEPEnrollmentRequest.UDID)
+		if err != nil {
+			return depEnrollmentResponse{Err: err}, nil
+		}
+		return depEnrollmentResponse{Profile: []byte(*profile)}, nil
+	}
+}
