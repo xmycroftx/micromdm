@@ -1,10 +1,12 @@
 hash: 8fe304e9385e4fbe963eba356a9784b3217ae75b65f50178322a7e1e41950e8d
-updated: 2016-04-23T23:08:58.017118556-04:00
+updated: 2016-04-24T01:39:00.276772505-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
+- name: github.com/fullsailor/pkcs7
+  version: 2585af45975b11f1d7502bb6c01556c29efb54ce
 - name: github.com/garyburd/redigo
   version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
   subpackages:
