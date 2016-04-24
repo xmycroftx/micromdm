@@ -1,54 +1,53 @@
 hash: 8fe304e9385e4fbe963eba356a9784b3217ae75b65f50178322a7e1e41950e8d
-updated: 2016-03-17T13:39:31.722470317-04:00
+updated: 2016-04-23T23:08:58.017118556-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/garyburd/redigo
-  version: 4ed1111375cbeb698249ffe48dd463e9b0a63a7a
+  version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
   subpackages:
   - redis
   - internal
 - name: github.com/go-kit/kit
-  version: 9b8ce4ffb319107a43400cf189dca14ef09255e2
+  version: ee4f2fa8fb2c0cfba4b54cad5764c4d0c0e60907
   subpackages:
   - endpoint
   - log
   - metrics
   - metrics/prometheus
   - transport/http
+- name: github.com/go-logfmt/logfmt
+  version: 08ab82a63ef462ac643ec79e659f023891f588f5
+- name: github.com/go-stack/stack
+  version: ac4c579c437a23e1a15814c867ccb82122fb383b
 - name: github.com/golang/protobuf
-  version: 62e4364d64b32762febb61f2c88c0a29bc49a225
+  version: bf531ff1a004f24ee53329dfd5ce0b41bfdc17df
   subpackages:
   - proto
 - name: github.com/gorilla/context
-  version: 1ea25387ff6f684839d82767c1733ff4d4d15d0a
+  version: a8d44e7d8e4d532b6a27a02dd82abb31cc1b01bd
 - name: github.com/gorilla/mux
-  version: acf3be1b335c8ce30b2c8d51300984666f0ceefa
+  version: 0eeaf8392f5b04950925b8a69fe70f110fa7cbfc
 - name: github.com/groob/plist
   version: 960422c558dc729e57204822eefad0636185ba2b
 - name: github.com/jmoiron/sqlx
   version: 398dd5876282499cdfd4cb8ea0f31a672abe9495
   subpackages:
   - reflectx
+- name: github.com/kr/logfmt
+  version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/lib/pq
-  version: 165a3529e799da61ab10faed1fabff3662d6193f
+  version: 3cd0097429be7d611bb644ef85b42bfb102ceea4
   subpackages:
   - oid
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: d0c3fe89de86839aecf2e0579c40ba3bb336a453
+  version: 3247c84500bff8d9fb6d579d800f20b3e091582c
   subpackages:
   - pbutil
 - name: github.com/micromdm/mdm
-  version: 0b08ebf4a9677b95c67c313c7f1189e0455f91d9
-- name: github.com/micromdm/micromdm
-  version: 94e85e8d676b55b3112e3c10438aef82c6278490
-  subpackages:
-  - checkin
-  - command
-  - connect
-  - device
+  version: 5b8de364af08f1e39d5f51d22fcba04642952526
 - name: github.com/prometheus/client_golang
   version: 90c15b5efa0dc32a7d259234e02ac9a99e6d3b82
   subpackages:
@@ -58,22 +57,18 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e8eabff8812b05acf522b45fdcd725a785188e37
+  version: 40456948a47496dc22168e6af39297a2f8fbf38c
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
+  version: abf152e5f3e97f2fafac028d2cc06c1feb87ffa5
 - name: github.com/satori/go.uuid
-  version: e673fdd4dea8a7334adbbe7f57b7e4b00bdc5502
+  version: f9ab0dce87d815821e221626b772e3475a0d2749
 - name: golang.org/x/net
-  version: 35b06af0720201bc2f326773a80767387544f8c4
+  version: b797637b7aeeed133049c7281bfa31dcc9ca42d6
   subpackages:
   - context
   - context/ctxhttp
-- name: gopkg.in/logfmt.v0
-  version: ffc984a0eaff44e46e1f42d6e0a65b665587a938
-- name: gopkg.in/stack.v1
-  version: 0585967eab0016c8e4e2d55ac20585b469574cec
 devImports: []
