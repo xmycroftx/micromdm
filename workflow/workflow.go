@@ -43,6 +43,7 @@ type pgDatastore struct {
 	*sqlx.DB
 }
 
+// CreateWorkflow creates a new workflow
 func (db pgDatastore) CreateWorkflow(name string) (*Workflow, error) {
 	upsert := `INSERT INTO workflows
 			  (name)
@@ -68,23 +69,7 @@ func (db pgDatastore) CreateWorkflow(name string) (*Workflow, error) {
 	return &wf, nil
 }
 
-func (db pgDatastore) RemoveProfile(wfUUID, pfUUID string) error {
-	remove := `DELETE FROM workflow_profile
-			   WHERE workflow_uuid=$1 AND profile_uuid=$2;`
-	result, err := db.Exec(
-		remove,
-		wfUUID,
-		pfUUID,
-	)
-	if err != nil {
-		return err
-	}
-	if res, _ := result.RowsAffected(); res == 0 {
-		return ErrNoRowsModified
-	}
-	return nil
-}
-
+// GetWorkflows returns all workflows in the database
 func (db pgDatastore) GetWorkflows() ([]Workflow, error) {
 	var workflows []Workflow
 	err := db.Select(&workflows, "SELECT * FROM workflows")
@@ -101,6 +86,44 @@ func (db pgDatastore) GetWorkflows() ([]Workflow, error) {
 		withProfiles = append(withProfiles, wf)
 	}
 	return withProfiles, nil
+}
+
+// AddProfile adds a profile to a workflow
+func (db pgDatastore) AddProfile(wfUUID, pfUUID string) error {
+	update := `INSERT INTO workflow_profile
+			   (workflow_uuid, profile_uuid)
+			   VALUES ($1, $2);`
+
+	result, err := db.Exec(
+		update,
+		wfUUID,
+		pfUUID,
+	)
+	if err != nil {
+		return err
+	}
+	if res, _ := result.RowsAffected(); res == 0 {
+		return ErrNoRowsModified
+	}
+	return nil
+}
+
+// RemoveProfile removes a profile wrom a workflow
+func (db pgDatastore) RemoveProfile(wfUUID, pfUUID string) error {
+	remove := `DELETE FROM workflow_profile
+			   WHERE workflow_uuid=$1 AND profile_uuid=$2;`
+	result, err := db.Exec(
+		remove,
+		wfUUID,
+		pfUUID,
+	)
+	if err != nil {
+		return err
+	}
+	if res, _ := result.RowsAffected(); res == 0 {
+		return ErrNoRowsModified
+	}
+	return nil
 }
 
 func (db pgDatastore) getProfilesForWorkflow(uuid string) ([]profile.Profile, error) {
@@ -120,25 +143,6 @@ func (db pgDatastore) getProfilesForWorkflow(uuid string) ([]profile.Profile, er
 		profiles = append(profiles, pf)
 	}
 	return profiles, nil
-}
-
-func (db pgDatastore) AddProfile(wfUUID, pfUUID string) error {
-	update := `INSERT INTO workflow_profile
-			   (workflow_uuid, profile_uuid)
-			   VALUES ($1, $2);`
-
-	result, err := db.Exec(
-		update,
-		wfUUID,
-		pfUUID,
-	)
-	if err != nil {
-		return err
-	}
-	if res, _ := result.RowsAffected(); res == 0 {
-		return ErrNoRowsModified
-	}
-	return nil
 }
 
 // Logger adds a logger to the database config
