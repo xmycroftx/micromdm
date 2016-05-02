@@ -24,11 +24,11 @@ type application struct {
 
 // Workflow is a device workflow
 type Workflow struct {
-	UUID              string `db:"workflow_uuid"`
-	Name              string `db:"name"`
-	Profiles          []profile.Profile
-	Applications      []application
-	IncludedWorkflows []Workflow
+	UUID     string `db:"workflow_uuid"`
+	Name     string `db:"name"`
+	Profiles []profile.Profile
+	// Applications      []application
+	// IncludedWorkflows []Workflow
 }
 
 // Datastore manages interactions of workflows in a database
