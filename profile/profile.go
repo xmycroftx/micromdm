@@ -5,12 +5,13 @@ import "time"
 // Profile is a configuration profile
 // See https://developer.apple.com/library/ios/featuredarticles/iPhoneConfigurationProfileRef/Introduction/Introduction.html#//apple_ref/doc/uid/TP40010206-CH1-SW4
 type Profile struct {
+	UUID                     string `plist:"-" json:"-" db:"profile_uuid"`
 	PayloadContent           []PayloadDictionary
 	PayloadDescription       string    `plist:",omitempty" json:",omitempty"`
 	PayloadDisplayName       string    `plist:",omitempty" json:",omitempty"`
 	PayloadExpirationDate    time.Time `plist:",omitempty" json:",omitempty"`
-	PayloadIdentifier        string
-	PayloadOrganization      string `plist:",omitempty" json:",omitempty"`
+	PayloadIdentifier        string    `db:"identifier"`
+	PayloadOrganization      string    `plist:",omitempty" json:",omitempty"`
 	PayloadUUID              string
 	PayloadRemovalDisallowed bool `plist:",omitempty" json:",omitempty"`
 	PayloadType              string
