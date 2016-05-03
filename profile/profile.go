@@ -3,8 +3,15 @@ package profile
 import "time"
 
 // Profile is a configuration profile
-// See https://developer.apple.com/library/ios/featuredarticles/iPhoneConfigurationProfileRef/Introduction/Introduction.html#//apple_ref/doc/uid/TP40010206-CH1-SW4
 type Profile struct {
+	UUID              string `plist:"-" json:"-" db:"profile_uuid"`
+	PayloadIdentifier string `json:"payload_identifier" db:"identifier"`
+	Data              []byte `json:"data" db:"data"`
+}
+
+// XMLProfile is a configuration profile
+// See https://developer.apple.com/library/ios/featuredarticles/iPhoneConfigurationProfileRef/Introduction/Introduction.html#//apple_ref/doc/uid/TP40010206-CH1-SW4
+type XMLProfile struct {
 	UUID                     string `plist:"-" json:"-" db:"profile_uuid"`
 	PayloadContent           []PayloadDictionary
 	PayloadDescription       string    `plist:",omitempty" json:",omitempty"`

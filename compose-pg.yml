@@ -1,0 +1,11 @@
+postgres:
+    image: postgres
+    restart: always
+    environment:
+        - POSTGRES_USER=micromdm
+        - POSTGRES_PASSWORD=micromdm
+        - POSTGRES_DB=micromdm
+        - SSLMODE=disable
+    ports:
+        - "127.0.0.1:5432:5432"
+

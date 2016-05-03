@@ -17,7 +17,7 @@ import (
 
 var (
 	// ErrEmptyRequest is returned if the request body is empty
-	ErrEmptyRequest = errors.New("Request must contain UDID of the device")
+	ErrEmptyRequest = errors.New("request must contain UDID of the device")
 	errBadRouting   = errors.New("inconsistent mapping between route and handler (programmer error)")
 )
 

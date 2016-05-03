@@ -1,5 +1,5 @@
 hash: 8fe304e9385e4fbe963eba356a9784b3217ae75b65f50178322a7e1e41950e8d
-updated: 2016-04-24T10:56:48.110433681-04:00
+updated: 2016-05-03T12:33:50.516339682-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -20,6 +20,7 @@ imports:
   - metrics
   - metrics/prometheus
   - transport/http
+  - log/levels
 - name: github.com/go-logfmt/logfmt
   version: 08ab82a63ef462ac643ec79e659f023891f588f5
 - name: github.com/go-stack/stack
@@ -50,6 +51,8 @@ imports:
   - pbutil
 - name: github.com/micromdm/mdm
   version: d64bbc40594da804b956062912d62453cad70459
+- name: github.com/pkg/errors
+  version: 42fa80f2ac6ed17a977ce826074bd3009593fa9d
 - name: github.com/prometheus/client_golang
   version: 90c15b5efa0dc32a7d259234e02ac9a99e6d3b82
   subpackages:

@@ -13,6 +13,7 @@ import (
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/connect"
 	"github.com/micromdm/micromdm/device"
+	"github.com/micromdm/micromdm/workflow"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 )
@@ -117,6 +118,17 @@ func main() {
 	)
 	connectHandler := connect.ServiceHandler(ctx, connectSvc)
 
+	workflowDB := workflow.NewDB(
+		"postgres",
+		*flPGconn,
+		workflow.Logger(logger),
+		workflow.Debug(),
+	)
+
+	workflowSvc := workflow.NewService(workflow.DB(workflowDB))
+
+	workflowHandler := workflow.ServiceHandler(ctx, workflowSvc)
+
 	// router
 	r := mux.NewRouter()
 	r.Methods("PUT", "POST").Path("/mdm/checkin").Handler(checkinHandler)
@@ -125,6 +137,9 @@ func main() {
 	r.Methods("POST").Path("/mdm/commands").Handler(commandHandler)
 	r.Methods("GET").Path("/mdm/commands/{udid}/next").Handler(commandHandler)
 	r.Methods("DELETE").Path("/mdm/commands/{udid}/{uuid}").Handler(commandHandler)
+
+	r.Handle("/mdm/worflows", workflowHandler)
+	r.Methods("POST").Path("/mdm/workflows").Handler(workflowHandler)
 
 	http.Handle("/", r)
 	http.Handle("/metrics", stdprometheus.Handler())

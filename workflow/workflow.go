@@ -3,15 +3,15 @@ package workflow
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/levels"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgres driver
-	"github.com/micromdm/micromdm/profile"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
 
@@ -39,11 +39,16 @@ type application struct {
 	ManifestURL     string
 }
 
+type configProfile struct {
+	UUID              string `plist:"-" json:"-" db:"profile_uuid"`
+	PayloadIdentifier string `json:"payload_identifier" db:"identifier"`
+}
+
 // Workflow is a device workflow
 type Workflow struct {
-	UUID     string `db:"workflow_uuid"`
-	Name     string `db:"name"`
-	Profiles []profile.Profile
+	UUID     string          `json:"uuid" db:"workflow_uuid"`
+	Name     string          `json:"name" db:"name"`
+	Profiles []configProfile `json:"profiles"`
 	// Applications      []application
 	// IncludedWorkflows []Workflow
 }
@@ -57,6 +62,8 @@ type Datastore interface {
 }
 
 type pgDatastore struct {
+	info  log.Logger
+	debug log.Logger
 	*sqlx.DB
 }
 
@@ -65,11 +72,14 @@ func (db pgDatastore) CreateWorkflow(name string) (*Workflow, error) {
 	workflow := &Workflow{Name: name}
 	err := db.QueryRow(createWorkflowStmt, name).Scan(&workflow.UUID)
 	if err == sql.ErrNoRows {
+		db.debug.Log("err", "exists", "workflow", name)
 		return nil, ErrNoRowsModified
 	}
 	if err != nil {
-		return nil, err
+		db.info.Log("err", err, "workflow", name)
+		return nil, errors.Wrap(err, "create workflow failed")
 	}
+	db.debug.Log("msg", "created", "workflow", name, "uuid", workflow.UUID)
 	return workflow, nil
 }
 
@@ -94,28 +104,33 @@ func (db pgDatastore) GetWorkflows() ([]Workflow, error) {
 
 // AddProfile adds a profile to a workflow
 func (db pgDatastore) AddProfile(wfUUID, pfUUID string) error {
+	db.debug.Log("action", "AddProfile", "workflow", wfUUID, "profile", pfUUID)
 	result, err := db.Exec(
 		addProfileStmt,
 		wfUUID,
 		pfUUID,
 	)
 	if err != nil {
+		db.debug.Log("action", "AddProfile", "workflow", wfUUID, "profile", pfUUID, "err", err)
 		return err
 	}
 	if _, err := result.RowsAffected(); err != nil {
 		return err
 	}
+	db.debug.Log("action", "AddProfile", "workflow", wfUUID, "profile", pfUUID, "status", "success")
 	return nil
 }
 
 // RemoveProfile removes a profile wrom a workflow
 func (db pgDatastore) RemoveProfile(wfUUID, pfUUID string) error {
+	db.debug.Log("action", "RemoveProfile", "workflow", wfUUID, "profile", pfUUID)
 	result, err := db.Exec(
 		removeProfileStmt,
 		wfUUID,
 		pfUUID,
 	)
 	if err != nil {
+		db.debug.Log("err", err)
 		return err
 	}
 	if _, err := result.RowsAffected(); err != nil {
@@ -124,8 +139,8 @@ func (db pgDatastore) RemoveProfile(wfUUID, pfUUID string) error {
 	return nil
 }
 
-func (db pgDatastore) getProfilesForWorkflow(workflowUUID string) ([]profile.Profile, error) {
-	var profiles []profile.Profile
+func (db pgDatastore) getProfilesForWorkflow(workflowUUID string) ([]configProfile, error) {
+	var profiles []configProfile
 	err := db.Select(&profiles, getProfilesForWorkflowStmt, workflowUUID)
 	if err != nil {
 		return nil, err
@@ -141,23 +156,32 @@ func Logger(logger log.Logger) func(*config) error {
 	}
 }
 
+// Debug adds a debug logger to the database config
+func Debug() func(*config) error {
+	return func(c *config) error {
+		c.debug = true
+		return nil
+	}
+}
+
 type config struct {
+	db      Datastore
 	context context.Context
 	logger  log.Logger
+	debug   bool
 }
 
 // NewDB creates a new databases connection
 func NewDB(driver, conn string, options ...func(*config) error) Datastore {
-	conf := &config{}
+	conf := &config{
+		logger: log.NewNopLogger(),
+	}
 	defaultLogger := log.NewLogfmtLogger(os.Stderr)
 	for _, option := range options {
 		if err := option(conf); err != nil {
 			defaultLogger.Log("err", err)
 			os.Exit(1)
 		}
-	}
-	if conf.logger == nil {
-		conf.logger = log.NewNopLogger()
 	}
 	switch driver {
 	case "postgres":
@@ -183,7 +207,11 @@ func NewDB(driver, conn string, options ...func(*config) error) Datastore {
 		migrate(db)
 		// TODO: configurable with default
 		db.SetMaxOpenConns(5)
-		store := pgDatastore{db}
+		store := pgDatastore{
+			info:  infoLogger(conf),
+			debug: debugLogger(conf),
+			DB:    db,
+		}
 		return store
 	default:
 		conf.logger.Log("err", "unknown driver")
@@ -192,9 +220,28 @@ func NewDB(driver, conn string, options ...func(*config) error) Datastore {
 	}
 }
 
+func infoLogger(conf *config) log.Logger {
+	return levels.New(conf.logger).Info()
+}
+
+func debugLogger(conf *config) log.Logger {
+	if conf.debug {
+		logger := levels.New(conf.logger).Debug()
+		ctx := log.NewContext(logger).With("caller", log.DefaultCaller)
+		return ctx
+	}
+	return log.NewNopLogger()
+}
+
 func migrate(db *sqlx.DB) {
 	schema := `
 	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+	CREATE TABLE IF NOT EXISTS profiles (
+	  profile_uuid uuid PRIMARY KEY 
+	            DEFAULT uuid_generate_v4(), 
+	  identifier text UNIQUE NOT NULL
+	  );
+
 	CREATE TABLE IF NOT EXISTS workflows (
 	  workflow_uuid uuid PRIMARY KEY 
 	            DEFAULT uuid_generate_v4(), 
