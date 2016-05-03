@@ -15,7 +15,20 @@ import (
 )
 
 // ErrNoRowsModified is returned if insert didn't produce results
-var ErrNoRowsModified = errors.New("DB: No rows affected")
+var ErrNoRowsModified = errors.New("db: no rows affected")
+
+var (
+	createWorkflowStmt = `INSERT INTO workflows (name) VALUES ($1) 
+								  ON CONFLICT ON CONSTRAINT workflows_name_key DO NOTHING;`
+	getWorkflowByNameStmt      = `SELECT workflow_uuid, name FROM workflows WHERE name=$1`
+	selectWorkflowsStmt        = `SELECT workflow_uuid, name FROM workflows`
+	addProfileStmt             = `INSERT INTO workflow_profile (workflow_uuid, profile_uuid) VALUES ($1, $2);`
+	removeProfileStmt          = `DELETE FROM workflow_profile WHERE workflow_uuid=$1 AND profile_uuid=$2;`
+	getProfilesForWorkflowStmt = `SELECT profiles.profile_uuid,identifier FROM profiles 
+								  LEFT JOIN workflow_profile 
+								  ON workflow_profile.profile_uuid = profiles.profile_uuid 
+								  WHERE workflow_profile.workflow_uuid=$1`
+)
 
 type application struct {
 	ManagementFlags int
@@ -45,14 +58,9 @@ type pgDatastore struct {
 
 // CreateWorkflow creates a new workflow
 func (db pgDatastore) CreateWorkflow(name string) (*Workflow, error) {
-	upsert := `INSERT INTO workflows
-			  (name)
-			  VALUES ($1)
-			  ON CONFLICT ON CONSTRAINT workflows_name_key
-			  DO NOTHING;`
 
 	result, err := db.Exec(
-		upsert,
+		createWorkflowStmt,
 		name,
 	)
 	if err != nil {
@@ -62,7 +70,7 @@ func (db pgDatastore) CreateWorkflow(name string) (*Workflow, error) {
 		return nil, ErrNoRowsModified
 	}
 	var wf Workflow
-	err = db.Get(&wf, "SELECT * FROM workflows WHERE name=$1", name)
+	err = db.Get(&wf, getWorkflowByNameStmt, name)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +80,7 @@ func (db pgDatastore) CreateWorkflow(name string) (*Workflow, error) {
 // GetWorkflows returns all workflows in the database
 func (db pgDatastore) GetWorkflows() ([]Workflow, error) {
 	var workflows []Workflow
-	err := db.Select(&workflows, "SELECT * FROM workflows")
+	err := db.Select(&workflows, selectWorkflowsStmt)
 	if err != nil {
 		return nil, err
 	}
@@ -90,12 +98,8 @@ func (db pgDatastore) GetWorkflows() ([]Workflow, error) {
 
 // AddProfile adds a profile to a workflow
 func (db pgDatastore) AddProfile(wfUUID, pfUUID string) error {
-	update := `INSERT INTO workflow_profile
-			   (workflow_uuid, profile_uuid)
-			   VALUES ($1, $2);`
-
 	result, err := db.Exec(
-		update,
+		addProfileStmt,
 		wfUUID,
 		pfUUID,
 	)
@@ -110,10 +114,8 @@ func (db pgDatastore) AddProfile(wfUUID, pfUUID string) error {
 
 // RemoveProfile removes a profile wrom a workflow
 func (db pgDatastore) RemoveProfile(wfUUID, pfUUID string) error {
-	remove := `DELETE FROM workflow_profile
-			   WHERE workflow_uuid=$1 AND profile_uuid=$2;`
 	result, err := db.Exec(
-		remove,
+		removeProfileStmt,
 		wfUUID,
 		pfUUID,
 	)
@@ -126,21 +128,11 @@ func (db pgDatastore) RemoveProfile(wfUUID, pfUUID string) error {
 	return nil
 }
 
-func (db pgDatastore) getProfilesForWorkflow(uuid string) ([]profile.Profile, error) {
-	var profileUUIDs []string
-	err := db.Select(&profileUUIDs, "SELECT profile_uuid FROM workflow_profile WHERE workflow_uuid=$1", uuid)
+func (db pgDatastore) getProfilesForWorkflow(workflowUUID string) ([]profile.Profile, error) {
+	var profiles []profile.Profile
+	err := db.Select(&profiles, getProfilesForWorkflowStmt, workflowUUID)
 	if err != nil {
 		return nil, err
-	}
-
-	var profiles []profile.Profile
-	for _, id := range profileUUIDs {
-		var pf profile.Profile
-		err := db.Get(&pf, "SELECT * FROM profiles WHERE profile_uuid=$1", id)
-		if err != nil {
-			return nil, err
-		}
-		profiles = append(profiles, pf)
 	}
 	return profiles, nil
 }

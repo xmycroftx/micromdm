@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -25,7 +24,7 @@ func TestMain(m *testing.M) {
 	db := newDB("postgres")
 	teardown(db)
 	retCode := m.Run()
-	teardown(db)
+	// teardown(db)
 
 	// call with result of m.Run()
 	os.Exit(retCode)
@@ -85,7 +84,6 @@ func TestGetWorkflows(t *testing.T) {
 	if len(workflows[0].Profiles) == 0 {
 		t.Fatal("should have at least one profile")
 	}
-	fmt.Printf("%+v", workflows[0])
 }
 
 func TestRemoveProfile(t *testing.T) {
