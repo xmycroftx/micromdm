@@ -161,7 +161,7 @@ func NewDB(driver, conn string, options ...func(*config) error) Datastore {
 		}
 	}
 	if conf.logger == nil {
-		conf.logger = defaultLogger
+		conf.logger = log.NewNopLogger()
 	}
 	switch driver {
 	case "postgres":
