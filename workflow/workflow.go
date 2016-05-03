@@ -2,6 +2,7 @@
 package workflow
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
@@ -19,10 +20,13 @@ var ErrNoRowsModified = errors.New("db: no rows affected")
 
 var (
 	createWorkflowStmt = `INSERT INTO workflows (name) VALUES ($1) 
-								  ON CONFLICT ON CONSTRAINT workflows_name_key DO NOTHING;`
-	getWorkflowByNameStmt      = `SELECT workflow_uuid, name FROM workflows WHERE name=$1`
-	selectWorkflowsStmt        = `SELECT workflow_uuid, name FROM workflows`
-	addProfileStmt             = `INSERT INTO workflow_profile (workflow_uuid, profile_uuid) VALUES ($1, $2);`
+						 ON CONFLICT ON CONSTRAINT workflows_name_key DO NOTHING
+						 RETURNING workflow_uuid;`
+
+	getWorkflowByNameStmt = `SELECT workflow_uuid, name FROM workflows WHERE name=$1`
+	selectWorkflowsStmt   = `SELECT workflow_uuid, name FROM workflows`
+	addProfileStmt        = `INSERT INTO workflow_profile (workflow_uuid, profile_uuid) VALUES ($1, $2)
+								  ON CONFLICT ON CONSTRAINT workflow_profile_pkey DO NOTHING;`
 	removeProfileStmt          = `DELETE FROM workflow_profile WHERE workflow_uuid=$1 AND profile_uuid=$2;`
 	getProfilesForWorkflowStmt = `SELECT profiles.profile_uuid,identifier FROM profiles 
 								  LEFT JOIN workflow_profile 
@@ -58,23 +62,15 @@ type pgDatastore struct {
 
 // CreateWorkflow creates a new workflow
 func (db pgDatastore) CreateWorkflow(name string) (*Workflow, error) {
-
-	result, err := db.Exec(
-		createWorkflowStmt,
-		name,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if res, _ := result.RowsAffected(); res == 0 {
+	workflow := &Workflow{Name: name}
+	err := db.QueryRow(createWorkflowStmt, name).Scan(&workflow.UUID)
+	if err == sql.ErrNoRows {
 		return nil, ErrNoRowsModified
 	}
-	var wf Workflow
-	err = db.Get(&wf, getWorkflowByNameStmt, name)
 	if err != nil {
 		return nil, err
 	}
-	return &wf, nil
+	return workflow, nil
 }
 
 // GetWorkflows returns all workflows in the database
@@ -106,8 +102,8 @@ func (db pgDatastore) AddProfile(wfUUID, pfUUID string) error {
 	if err != nil {
 		return err
 	}
-	if res, _ := result.RowsAffected(); res == 0 {
-		return ErrNoRowsModified
+	if _, err := result.RowsAffected(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -122,8 +118,8 @@ func (db pgDatastore) RemoveProfile(wfUUID, pfUUID string) error {
 	if err != nil {
 		return err
 	}
-	if res, _ := result.RowsAffected(); res == 0 {
-		return ErrNoRowsModified
+	if _, err := result.RowsAffected(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -199,12 +195,6 @@ func NewDB(driver, conn string, options ...func(*config) error) Datastore {
 func migrate(db *sqlx.DB) {
 	schema := `
 	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-	CREATE TABLE IF NOT EXISTS profiles (
-	  profile_uuid uuid PRIMARY KEY 
-	            DEFAULT uuid_generate_v4(), 
-	  identifier text UNIQUE NOT NULL
-	  );
-
 	CREATE TABLE IF NOT EXISTS workflows (
 	  workflow_uuid uuid PRIMARY KEY 
 	            DEFAULT uuid_generate_v4(), 
