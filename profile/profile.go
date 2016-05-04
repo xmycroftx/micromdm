@@ -9,9 +9,9 @@ import (
 
 // Profile is a configuration profile
 type Profile struct {
-	UUID              string `plist:"-" json:"profile_uuid" db:"profile_uuid"`
+	UUID              string `plist:"-" json:"profile_uuid,omitempty" db:"profile_uuid"`
 	PayloadIdentifier string `json:"payload_identifier" db:"identifier"`
-	Data              string `json:"data" db:"data"`
+	Data              string `json:"data,omitempty" db:"data"`
 }
 
 // Logger adds a logger to the database config

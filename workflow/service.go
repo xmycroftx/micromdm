@@ -36,10 +36,16 @@ func (svc workflowService) CreateWorkflow(wfRequest *Workflow) (*Workflow, error
 	}
 	// if this loop fails the workflow already exists
 	// need to delete the workflow? ugh
+	// also, the PayloadIdentifier is not validated
+	// it should be
 	for _, pf := range wfRequest.Profiles {
 		if err := svc.db.AddProfile(wf.UUID, pf.UUID); err != nil {
 			return nil, errors.Wrap(err, "createworkflow failed to add profile")
 		}
+		wf.Profiles = append(wf.Profiles, configProfile{
+			UUID:              pf.UUID,
+			PayloadIdentifier: pf.PayloadIdentifier,
+		})
 	}
 	return wf, nil
 }
