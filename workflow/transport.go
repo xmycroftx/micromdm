@@ -18,7 +18,8 @@ var (
 
 // NewWorkflowRequest in an HTTP request for a new workflow
 type NewWorkflowRequest struct {
-	Name string `json:"name"`
+	*Workflow
+	// Name string `json:"name"`
 }
 
 func decodeNewWorkflowRequest(r *http.Request) (interface{}, error) {
@@ -97,10 +98,14 @@ func codeFrom(err error) int {
 func makeNewWorkflowEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NewWorkflowRequest)
-		if req.Name == "" {
+		if req.Workflow == nil {
 			return NewWorkflowResponse{Err: ErrEmptyRequest}, nil
 		}
-		workflow, err := svc.CreateWorkflow(req.Name)
+		wfRequest := req.Workflow
+		if wfRequest.Name == "" {
+			return NewWorkflowResponse{Err: ErrEmptyRequest}, nil
+		}
+		workflow, err := svc.CreateWorkflow(wfRequest)
 		if err != nil {
 			return NewWorkflowResponse{Err: err}, nil
 		}

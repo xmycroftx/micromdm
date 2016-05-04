@@ -1,16 +1,38 @@
+// Package profile manages configuration profile payloads
 package profile
 
-import "time"
+import (
+	"time"
+
+	"github.com/go-kit/kit/log"
+)
 
 // Profile is a configuration profile
 type Profile struct {
-	UUID              string `plist:"-" json:"-" db:"profile_uuid"`
+	UUID              string `plist:"-" json:"profile_uuid" db:"profile_uuid"`
 	PayloadIdentifier string `json:"payload_identifier" db:"identifier"`
-	Data              []byte `json:"data" db:"data"`
+	Data              string `json:"data" db:"data"`
+}
+
+// Logger adds a logger to the database config
+func Logger(logger log.Logger) func(*config) error {
+	return func(c *config) error {
+		c.logger = logger
+		return nil
+	}
+}
+
+// Debug adds a debug logger to the database config
+func Debug() func(*config) error {
+	return func(c *config) error {
+		c.debug = true
+		return nil
+	}
 }
 
 // XMLProfile is a configuration profile
 // See https://developer.apple.com/library/ios/featuredarticles/iPhoneConfigurationProfileRef/Introduction/Introduction.html#//apple_ref/doc/uid/TP40010206-CH1-SW4
+// Ignore this for now
 type XMLProfile struct {
 	UUID                     string `plist:"-" json:"-" db:"profile_uuid"`
 	PayloadContent           []PayloadDictionary

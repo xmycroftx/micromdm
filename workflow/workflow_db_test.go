@@ -1,8 +1,11 @@
 package workflow
 
 import (
+	"net/http/httptest"
 	"os"
 	"testing"
+
+	"golang.org/x/net/context"
 
 	stdLog "log"
 
@@ -21,24 +24,32 @@ func newDB(driver string) *sqlx.DB {
 	return db
 }
 
-func TestMain(m *testing.M) {
+func newTestServer() *httptest.Server {
+	ctx := context.Background()
+	logger := log.NewLogfmtLogger(os.Stderr)
+	//
+	workflowDB := NewDB(
+		"postgres",
+		testConn,
+		Logger(logger),
+		Debug(),
+	)
 
-	db := newDB("postgres")
-	// setup(db)
-	retCode := m.Run()
-	teardown(db)
-	client.teardown()
-	// call with result of m.Run()
-	os.Exit(retCode)
+	workflowSvc := NewService(DB(workflowDB), Logger(logger), Debug())
+	workflowHandler := ServiceHandler(ctx, workflowSvc)
+	server := httptest.NewServer(workflowHandler)
+	return server
 }
+
 func setup(db *sqlx.DB) {
-	teardown(db)
+	// teardown(db)
 	schema := `
 	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 	CREATE TABLE IF NOT EXISTS profiles (
 	  profile_uuid uuid PRIMARY KEY 
 	            DEFAULT uuid_generate_v4(), 
-	  identifier text UNIQUE NOT NULL
+	  identifier text UNIQUE NOT NULL,
+	  data bytea
 	  );`
 	db.MustExec(schema)
 }
@@ -72,7 +83,7 @@ func TestCreateWorkflow(t *testing.T) {
 	db.MustExec(`INSERT INTO profiles (identifier) VALUES ($1);`, "com.micromdm.test")
 	db.MustExec(`INSERT INTO profiles (identifier) VALUES ($1);`, "com.micromdm.test2")
 	var pf profile.Profile
-	err := db.Get(&pf, "SELECT * FROM profiles WHERE identifier=$1", "com.micromdm.test")
+	err := db.Get(&pf, "SELECT profile_uuid, identifier FROM profiles WHERE identifier=$1", "com.micromdm.test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +108,7 @@ func TestCreateWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.Get(&pf, "SELECT * FROM profiles WHERE identifier=$1", "com.micromdm.test2")
+	err = db.Get(&pf, "SELECT profile_uuid, identifier FROM profiles WHERE identifier=$1", "com.micromdm.test2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +143,7 @@ func TestRemoveProfile(t *testing.T) {
 		Logger(log.NewLogfmtLogger(os.Stderr)), Debug())
 	db := newDB("postgres")
 	var pf profile.Profile
-	err := db.Get(&pf, "SELECT * FROM profiles WHERE identifier=$1", "com.micromdm.test")
+	err := db.Get(&pf, "SELECT profile_uuid FROM profiles WHERE identifier=$1", "com.micromdm.test")
 	if err != nil {
 		t.Fatal(err)
 	}

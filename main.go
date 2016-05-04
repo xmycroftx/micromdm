@@ -13,6 +13,7 @@ import (
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/connect"
 	"github.com/micromdm/micromdm/device"
+	"github.com/micromdm/micromdm/profile"
 	"github.com/micromdm/micromdm/workflow"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
@@ -118,6 +119,15 @@ func main() {
 	)
 	connectHandler := connect.ServiceHandler(ctx, connectSvc)
 
+	//profileDB must exist before workflowDB
+	// TODO this is getting messy and migrations should be handled by a separate thing
+	profileDB := profile.NewDB(
+		"postgres",
+		*flPGconn,
+		profile.Logger(logger),
+		profile.Debug(),
+	)
+
 	workflowDB := workflow.NewDB(
 		"postgres",
 		*flPGconn,
@@ -126,8 +136,11 @@ func main() {
 	)
 
 	workflowSvc := workflow.NewService(workflow.DB(workflowDB))
-
 	workflowHandler := workflow.ServiceHandler(ctx, workflowSvc)
+	// profiles
+
+	profileSvc := profile.NewService(profile.DB(profileDB))
+	profileHandler := profile.ServiceHandler(ctx, profileSvc)
 
 	// router
 	r := mux.NewRouter()
@@ -140,6 +153,9 @@ func main() {
 
 	r.Handle("/mdm/worflows", workflowHandler)
 	r.Methods("POST").Path("/mdm/workflows").Handler(workflowHandler)
+
+	r.Handle("/mdm/profiles", profileHandler)
+	r.Methods("POST", "GET").Path("/mdm/profiles").Handler(profileHandler)
 
 	http.Handle("/", r)
 	http.Handle("/metrics", stdprometheus.Handler())

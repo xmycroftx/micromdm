@@ -40,7 +40,7 @@ type application struct {
 }
 
 type configProfile struct {
-	UUID              string `plist:"-" json:"-" db:"profile_uuid"`
+	UUID              string `plist:"-" json:"profile_uuid" db:"profile_uuid"`
 	PayloadIdentifier string `json:"payload_identifier" db:"identifier"`
 }
 
@@ -56,7 +56,7 @@ type Workflow struct {
 // Datastore manages interactions of workflows in a database
 type Datastore interface {
 	CreateWorkflow(string) (*Workflow, error)
-	AddProfile(string, string) error
+	AddProfile(wfUUID, pfUUID string) error
 	RemoveProfile(string, string) error
 	GetWorkflows() ([]Workflow, error)
 }
@@ -104,7 +104,7 @@ func (db pgDatastore) GetWorkflows() ([]Workflow, error) {
 
 // AddProfile adds a profile to a workflow
 func (db pgDatastore) AddProfile(wfUUID, pfUUID string) error {
-	db.debug.Log("action", "AddProfile", "workflow", wfUUID, "profile", pfUUID)
+	db.debug.Log("action", "AddProfile", "workflow", wfUUID, "profile", pfUUID, "status", "begin")
 	result, err := db.Exec(
 		addProfileStmt,
 		wfUUID,
@@ -236,12 +236,6 @@ func debugLogger(conf *config) log.Logger {
 func migrate(db *sqlx.DB) {
 	schema := `
 	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-	CREATE TABLE IF NOT EXISTS profiles (
-	  profile_uuid uuid PRIMARY KEY 
-	            DEFAULT uuid_generate_v4(), 
-	  identifier text UNIQUE NOT NULL
-	  );
-
 	CREATE TABLE IF NOT EXISTS workflows (
 	  workflow_uuid uuid PRIMARY KEY 
 	            DEFAULT uuid_generate_v4(), 

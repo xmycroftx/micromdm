@@ -5,6 +5,7 @@ import (
 	"os"
 
 	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
@@ -13,7 +14,7 @@ import (
 
 // Service manages workflows
 type Service interface {
-	CreateWorkflow(string) (*Workflow, error)
+	CreateWorkflow(*Workflow) (*Workflow, error)
 	ListWorkflows() ([]Workflow, error)
 }
 
@@ -23,9 +24,24 @@ type workflowService struct {
 	db    Datastore
 }
 
-func (svc workflowService) CreateWorkflow(name string) (*Workflow, error) {
-	svc.debug.Log("action", "CreateWorkflow", "name", name)
-	return svc.db.CreateWorkflow(name)
+func (svc workflowService) CreateWorkflow(wfRequest *Workflow) (*Workflow, error) {
+	svc.debug.Log("action", "CreateWorkflow", "name", wfRequest.Name)
+	wf, err := svc.db.CreateWorkflow(wfRequest.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "workflow service")
+	}
+	// the request had no profiles, return response
+	if len(wfRequest.Profiles) == 0 {
+		return wf, nil
+	}
+	// if this loop fails the workflow already exists
+	// need to delete the workflow? ugh
+	for _, pf := range wfRequest.Profiles {
+		if err := svc.db.AddProfile(wf.UUID, pf.UUID); err != nil {
+			return nil, errors.Wrap(err, "createworkflow failed to add profile")
+		}
+	}
+	return wf, nil
 }
 
 func (svc workflowService) ListWorkflows() ([]Workflow, error) {

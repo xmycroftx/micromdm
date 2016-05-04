@@ -1,8 +1,6 @@
-package workflow
+package profile
 
 import (
-	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,21 +8,25 @@ import (
 	"os"
 	"testing"
 
-	"github.com/micromdm/micromdm/profile"
+	"golang.org/x/net/context"
+
+	"github.com/go-kit/kit/log"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
-	pg        = newDB("postgres")
 	client    = NewTestClient()
 	jsonMedia = "application/json; charset=utf-8"
+	testConn  = "user=micromdm password=micromdm dbname=micromdm sslmode=disable"
 )
 
 func TestMain(m *testing.M) {
 	db := newDB("postgres")
-	setup(db)
+	// setup(db)
 	retCode := m.Run()
 	teardown(db)
-	client.teardown()
+	// client.teardown()
+	// call with result of m.Run()
 	os.Exit(retCode)
 }
 
@@ -37,8 +39,6 @@ type TestClient struct {
 }
 
 func NewTestClient() *TestClient {
-	db := newDB("postgres")
-	setup(db)
 	client := &TestClient{client: http.DefaultClient}
 	client.server = newTestServer()
 	client.BaseURL, _ = url.Parse(client.server.URL)
@@ -87,48 +87,47 @@ type nopCloser struct {
 
 func (nopCloser) Close() error { return nil }
 
-// HTTP Test Code
+func newTestServer() *httptest.Server {
+	ctx := context.Background()
+	logger := log.NewLogfmtLogger(os.Stderr)
+	//
+	profileDB := NewDB(
+		"postgres",
+		testConn,
+		Logger(logger),
+		Debug(),
+	)
 
-func testWorkflow() (*Workflow, error) {
-	pf := profile.Profile{
-		PayloadIdentifier: "com.apple.foo",
-		Data:              "foo",
-	}
-	createProfileStmt := `INSERT INTO profiles (identifier, data ) VALUES ($1, $2) 
-						 ON CONFLICT ON CONSTRAINT profiles_identifier_key DO NOTHING
-						 RETURNING profile_uuid;`
-	err := pg.QueryRow(createProfileStmt, pf.PayloadIdentifier, pf.Data).Scan(&pf.UUID)
-	if err != nil {
-		return nil, err
-	}
-	return &Workflow{
-		Name: "test_workflow_one",
-		Profiles: []configProfile{
-			configProfile{pf.UUID, pf.PayloadIdentifier},
-		},
-	}, nil
+	profileSvc := NewService(DB(profileDB), Logger(logger), Debug())
+	profileHandler := ServiceHandler(ctx, profileSvc)
+	server := httptest.NewServer(profileHandler)
+	return server
 }
 
-func TestHTTPCreateWorkflow(t *testing.T) {
-	req, err := client.NewRequest("workflows", "", jsonMedia, "POST")
+var store = NewDB("postgres", testConn, Logger(log.NewLogfmtLogger(os.Stderr)), Debug())
+
+func newDB(driver string) *sqlx.DB {
+	db, err := sqlx.Open(driver, testConn)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
-	wf, err := testWorkflow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	body, err := json.Marshal(wf)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.Body = &nopCloser{bytes.NewBuffer(body)}
-	resp, err := client.Do(req, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != http.StatusCreated {
-		t.Error("Expected", http.StatusCreated, "got", resp.StatusCode)
-		io.Copy(os.Stdout, resp.Body)
-	}
+	return db
+}
+
+func setup(db *sqlx.DB) {
+	schema := `
+	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+	CREATE TABLE IF NOT EXISTS profiles (
+	  profile_uuid uuid PRIMARY KEY 
+	            DEFAULT uuid_generate_v4(), 
+	  identifier text UNIQUE NOT NULL
+	  );`
+	db.MustExec(schema)
+}
+
+func teardown(db *sqlx.DB) {
+	drop := `
+	DROP TABLE IF EXISTS profiles;
+	`
+	db.MustExec(drop)
 }
