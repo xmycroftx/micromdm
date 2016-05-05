@@ -78,6 +78,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	//profileDB must exist before workflowDB
+	// TODO this is getting messy and migrations should be handled by a separate thing
+	profileDB := profile.NewDB(
+		"postgres",
+		*flPGconn,
+		profile.Logger(logger),
+		profile.Debug(),
+	)
+
+	workflowDB := workflow.NewDB(
+		"postgres",
+		*flPGconn,
+		workflow.Logger(logger),
+		workflow.Debug(),
+	)
+
 	deviceDB := device.NewDB(
 		"postgres",
 		*flPGconn,
@@ -118,22 +134,6 @@ func main() {
 		connect.Redis(commandDB),
 	)
 	connectHandler := connect.ServiceHandler(ctx, connectSvc)
-
-	//profileDB must exist before workflowDB
-	// TODO this is getting messy and migrations should be handled by a separate thing
-	profileDB := profile.NewDB(
-		"postgres",
-		*flPGconn,
-		profile.Logger(logger),
-		profile.Debug(),
-	)
-
-	workflowDB := workflow.NewDB(
-		"postgres",
-		*flPGconn,
-		workflow.Logger(logger),
-		workflow.Debug(),
-	)
 
 	workflowSvc := workflow.NewService(workflow.DB(workflowDB))
 	workflowHandler := workflow.ServiceHandler(ctx, workflowSvc)

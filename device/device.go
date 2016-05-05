@@ -20,7 +20,7 @@ var ErrNoRowsModified = errors.New("DB: No rows affected")
 // Device represents an iOS or OS X Computer
 type Device struct {
 	// Primary key is UUID
-	UUID         string  `json:"uuid"`
+	UUID         string  `json:"uuid" db:"device_uuid"`
 	UDID         string  `json:"udid"`
 	SerialNumber *string `json:"serial_number,omitempty" db:"serial_number,omitempty"`
 	OSVersion    *string `json:"os_version,omitempty" db:"os_version,omitempty"`
@@ -35,6 +35,7 @@ type Device struct {
 	Token                 *string `json:"token,omitempty" db:"apple_mdm_token,omitempty"`
 	UnlockToken           *string `json:"unlock_token,omitempty" db:"unlock_token,omitempty"`
 	Enrolled              *bool   `json:"enrolled,omitempty" db:"mdm_enrolled,omitempty"`
+	Workflow              string  `json:"workflow,omitempty" db:"workflow_uuid"`
 }
 
 // Profile is an Enrollment profile.
@@ -49,6 +50,7 @@ type Datastore interface {
 	// RemoveDevice() error
 	// AllDevices() DeviceList,error
 	GetProfileForDevice(udid string) (*Profile, error)
+	Save(string, *Device) error
 }
 
 type config struct {
@@ -161,7 +163,7 @@ func (db pgDatastore) SaveDevice(dev *Device) error {
 	apple_push_magic=$3,
 	apple_mdm_token=$4,
 	mdm_enrolled=$5
-	WHERE uuid=$1`
+	WHERE device_uuid=$1`
 	result, err := db.Exec(
 		update,
 		dev.UUID,
@@ -175,6 +177,19 @@ func (db pgDatastore) SaveDevice(dev *Device) error {
 	}
 	if res, _ := result.RowsAffected(); res == 0 {
 		return ErrNoRowsModified
+	}
+	return nil
+}
+
+func (db pgDatastore) Save(msg string, dev *Device) error {
+	var stmt string
+	switch msg {
+	case "assign":
+		stmt = `INSERT INTO device_workflow VALUES (:device_uuid, :workflow_uuid);`
+	}
+	_, err := db.NamedExec(stmt, dev)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -194,7 +209,7 @@ func migrate(db *sqlx.DB) {
 	schema := `
 	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 	CREATE TABLE IF NOT EXISTS devices (
-	  uuid uuid PRIMARY KEY 
+	  device_uuid uuid PRIMARY KEY 
 	            DEFAULT uuid_generate_v4(), 
 	  udid text UNIQUE NOT NULL,
 	  serial_number text,
@@ -208,6 +223,12 @@ func migrate(db *sqlx.DB) {
 	  apple_push_magic text,
 	  mdm_enrolled boolean,
 	  awaiting_configuration boolean
-	  );`
+	  );
+
+	CREATE TABLE IF NOT EXISTS device_workflow (
+		device_uuid uuid REFERENCES devices,
+		workflow_uuid uuid REFERENCES workflows,
+		PRIMARY KEY (device_uuid, workflow_uuid)
+  	  );`
 	db.MustExec(schema)
 }
