@@ -28,18 +28,23 @@ func decodeMDMCheckinRequest(r *http.Request) (interface{}, error) {
 func decodeMDMEnrollmentRequest(r *http.Request) (interface{}, error) {
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
+	fmt.Println(string(data))
 	p7, err := pkcs7.Parse(data)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	// TODO: We should verify but not currently possible. Apple
 	// does no provide a cert for the CA.
 	var request depEnrollmentRequest
 	if err := plist.Unmarshal(p7.Content, &request); err != nil {
+		log.Println(err)
 		return nil, err
 	}
+	fmt.Println(request)
 	return request, nil
 }
 

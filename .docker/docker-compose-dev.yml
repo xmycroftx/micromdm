@@ -60,3 +60,4 @@ data:
         - /certs.d
         - /pkgrepo
         - /profiles
+        - /mdmkeys

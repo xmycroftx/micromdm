@@ -38,6 +38,8 @@ func main() {
 		flPGconn    = flag.String("postgres", envString("MICROMDM_POSTGRES_CONN_URL", ""), "postgres connection url")
 		flRedisconn = flag.String("redis", envString("MICROMDM_REDIS_CONN_URL", ""), "redis connection url")
 		flVersion   = flag.Bool("version", false, "print version information")
+		flPushCert  = flag.String("push-cert", envString("MICROMDM_PUSH_CERT", ""), "path to push certificate")
+		flPushPass  = flag.String("push-pass", envString("MICROMDM_PUSH_PASS", ""), "push certificate password")
 	)
 
 	// set tls to true by default. let user set it to false
@@ -104,6 +106,7 @@ func main() {
 	checkinSvc := checkin.NewCheckinService(
 		checkin.Datastore(deviceDB),
 		checkin.Logger(logger),
+		checkin.Push(*flPushCert, *flPushPass),
 	)
 	checkinHandler := checkin.ServiceHandler(ctx, checkinSvc)
 

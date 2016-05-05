@@ -14,6 +14,7 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"github.com/micromdm/mdm"
+	"github.com/micromdm/micromdm/checkin/push"
 	"github.com/micromdm/micromdm/device"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
@@ -40,7 +41,9 @@ func NewCheckinService(options ...func(*config) error) MDMCheckinService {
 		}
 	}
 	var svc MDMCheckinService
-	svc = mdmCheckinService{conf.db}
+	// p := mdmpush.New(conf.logger, conf.pushcert, conf.pushpass)
+	// svc = mdmCheckinServie{pushsvc: p, db: conf.db}
+	svc = mdmCheckinService{db: conf.db}
 	if conf.logger != nil {
 		svc = loggingMiddleware{conf.logger, svc}
 	}
@@ -74,13 +77,25 @@ func Datastore(db device.Datastore) func(*config) error {
 	}
 }
 
+//Push creates a push client
+func Push(cert, password string) func(*config) error {
+	return func(c *config) error {
+		c.pushcert = cert
+		c.pushpass = password
+		return nil
+	}
+}
+
 type config struct {
-	logger log.Logger
-	db     device.Datastore
+	pushcert string //path to cert
+	pushpass string //password for cert
+	logger   log.Logger
+	db       device.Datastore
 }
 
 type mdmCheckinService struct {
-	db device.Datastore
+	pushsvc mdmpush.Pusher
+	db      device.Datastore
 }
 
 func (svc mdmCheckinService) Authenticate(cmd mdm.CheckinCommand) error {
@@ -114,6 +129,7 @@ func (svc mdmCheckinService) TokenUpdate(cmd mdm.CheckinCommand) error {
 	if err != nil {
 		return err
 	}
+	// svc.pushsvc.Push(cmd.PushMagic, token)
 	return nil
 }
 

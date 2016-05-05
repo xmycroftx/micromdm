@@ -1,5 +1,5 @@
 hash: 8fe304e9385e4fbe963eba356a9784b3217ae75b65f50178322a7e1e41950e8d
-updated: 2016-05-03T12:33:50.516339682-04:00
+updated: 2016-05-05T14:49:55.86880083-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -69,11 +69,25 @@ imports:
   - model
 - name: github.com/prometheus/procfs
   version: abf152e5f3e97f2fafac028d2cc06c1feb87ffa5
+- name: github.com/RobotsAndPencils/buford
+  version: 2861f2a5612806afe88232539f5e4255d39ae544
+  subpackages:
+  - certificate
+  - payload
+  - push
+  - payload/badge
 - name: github.com/satori/go.uuid
   version: f9ab0dce87d815821e221626b772e3475a0d2749
+- name: golang.org/x/crypto
+  version: 019870fc9d457ee8abd13a2e93e3f2a3b55b7119
+  subpackages:
+  - pkcs12
+  - pkcs12/internal/rc2
 - name: golang.org/x/net
   version: b797637b7aeeed133049c7281bfa31dcc9ca42d6
   subpackages:
   - context
   - context/ctxhttp
+  - http2
+  - http2/hpack
 devImports: []
