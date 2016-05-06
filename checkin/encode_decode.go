@@ -1,7 +1,6 @@
 package checkin
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,7 +14,6 @@ func decodeMDMCheckinRequest(r *http.Request) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(data))
 	var request mdmCheckinRequest
 	if err := plist.Unmarshal(data, &request); err != nil {
 		return nil, err

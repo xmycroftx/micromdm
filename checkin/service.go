@@ -41,9 +41,14 @@ func NewCheckinService(options ...func(*config) error) MDMCheckinService {
 		}
 	}
 	var svc MDMCheckinService
-	// p := mdmpush.New(conf.logger, conf.pushcert, conf.pushpass)
-	// svc = mdmCheckinServie{pushsvc: p, db: conf.db}
-	svc = mdmCheckinService{db: conf.db}
+
+	// this is better build through middleware!
+	if conf.pushcert != "" && conf.pushpass != "" {
+		p := mdmpush.New(conf.logger, conf.pushcert, conf.pushpass)
+		svc = mdmCheckinService{pushsvc: p, db: conf.db}
+	} else {
+		svc = mdmCheckinService{db: conf.db}
+	}
 	if conf.logger != nil {
 		svc = loggingMiddleware{conf.logger, svc}
 	}
@@ -129,7 +134,10 @@ func (svc mdmCheckinService) TokenUpdate(cmd mdm.CheckinCommand) error {
 	if err != nil {
 		return err
 	}
-	// svc.pushsvc.Push(cmd.PushMagic, token)
+
+	if svc.pushsvc != nil {
+		svc.pushsvc.Push(cmd.PushMagic, token)
+	}
 	return nil
 }
 
