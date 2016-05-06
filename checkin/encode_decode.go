@@ -31,7 +31,6 @@ func decodeMDMEnrollmentRequest(r *http.Request) (interface{}, error) {
 		log.Println(err)
 		return nil, err
 	}
-	fmt.Println(string(data))
 	p7, err := pkcs7.Parse(data)
 	if err != nil {
 		log.Println(err)
@@ -44,7 +43,6 @@ func decodeMDMEnrollmentRequest(r *http.Request) (interface{}, error) {
 		log.Println(err)
 		return nil, err
 	}
-	fmt.Println(request)
 	return request, nil
 }
 

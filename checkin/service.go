@@ -20,7 +20,7 @@ import (
 )
 
 // ErrInvalidMessageType is an invalid checking command
-var ErrInvalidMessageType = errors.New("Invalid MessageType")
+var ErrInvalidMessageType = errors.New("invalid message type")
 
 // MDMCheckinService models Apple's MDM Checkin commands
 type MDMCheckinService interface {

@@ -54,8 +54,9 @@ type Datastore interface {
 }
 
 type config struct {
-	context context.Context
-	logger  log.Logger
+	context       context.Context
+	logger        log.Logger
+	enrollProfile string
 }
 
 // NewDB creates a new databases connection
@@ -95,7 +96,7 @@ func NewDB(driver, conn string, options ...func(*config) error) Datastore {
 		migrate(db)
 		// TODO: configurable with default
 		db.SetMaxOpenConns(5)
-		store := pgDatastore{db}
+		store := pgDatastore{db, conf.enrollProfile}
 		return store
 	default:
 		conf.logger.Log("err", "unknown driver")
@@ -112,9 +113,19 @@ func Logger(logger log.Logger) func(*config) error {
 	}
 }
 
+// EnrollProfile sets the path for the enrollment profile
+// another temp hack
+func EnrollProfile(path string) func(*config) error {
+	return func(c *config) error {
+		c.enrollProfile = path
+		return nil
+	}
+}
+
 // datastore implementation for postgres
 type pgDatastore struct {
 	*sqlx.DB
+	enrollProfile string
 }
 
 func (db pgDatastore) AddDevice(dev *Device) error {
@@ -197,7 +208,7 @@ func (db pgDatastore) Save(msg string, dev *Device) error {
 // GetProfileForDevice returns an enrollment profile for a specific device
 // For now there's a single profile stored on disk
 func (db pgDatastore) GetProfileForDevice(uuid string) (*Profile, error) {
-	data, err := ioutil.ReadFile("/profiles/Enroll.mobileconfig")
+	data, err := ioutil.ReadFile(db.enrollProfile)
 	if err != nil {
 		return nil, err
 	}

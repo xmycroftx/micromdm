@@ -31,15 +31,16 @@ func main() {
 
 	//flags
 	var (
-		flPort      = flag.String("port", envString("MICROMDM_HTTP_LISTEN_PORT", ""), "port to listen on")
-		flTLS       = flag.Bool("tls", envBool("MICROMDM_USE_TLS"), "use https")
-		flTLSCert   = flag.String("tls-cert", envString("MICROMDM_TLS_CERT", ""), "path to TLS certificate")
-		flTLSKey    = flag.String("tls-key", envString("MICROMDM_TLS_KEY", ""), "path to TLS private key")
-		flPGconn    = flag.String("postgres", envString("MICROMDM_POSTGRES_CONN_URL", ""), "postgres connection url")
-		flRedisconn = flag.String("redis", envString("MICROMDM_REDIS_CONN_URL", ""), "redis connection url")
-		flVersion   = flag.Bool("version", false, "print version information")
-		flPushCert  = flag.String("push-cert", envString("MICROMDM_PUSH_CERT", ""), "path to push certificate")
-		flPushPass  = flag.String("push-pass", envString("MICROMDM_PUSH_PASS", ""), "push certificate password")
+		flPort       = flag.String("port", envString("MICROMDM_HTTP_LISTEN_PORT", ""), "port to listen on")
+		flTLS        = flag.Bool("tls", envBool("MICROMDM_USE_TLS"), "use https")
+		flTLSCert    = flag.String("tls-cert", envString("MICROMDM_TLS_CERT", ""), "path to TLS certificate")
+		flTLSKey     = flag.String("tls-key", envString("MICROMDM_TLS_KEY", ""), "path to TLS private key")
+		flPGconn     = flag.String("postgres", envString("MICROMDM_POSTGRES_CONN_URL", ""), "postgres connection url")
+		flRedisconn  = flag.String("redis", envString("MICROMDM_REDIS_CONN_URL", ""), "redis connection url")
+		flVersion    = flag.Bool("version", false, "print version information")
+		flPushCert   = flag.String("push-cert", envString("MICROMDM_PUSH_CERT", ""), "path to push certificate")
+		flPushPass   = flag.String("push-pass", envString("MICROMDM_PUSH_PASS", ""), "push certificate password")
+		flEnrollment = flag.String("profile", envString("MICROMDM_ENROLL_PROFILE", ""), "path to enrollment profile")
 	)
 
 	// set tls to true by default. let user set it to false
@@ -59,6 +60,11 @@ func main() {
 		port := defaultPort(*flTLS)
 		logger.Log("msg", fmt.Sprintf("No port flag specified. Using %v by default", port))
 		*flPort = port
+	}
+
+	if *flEnrollment == "" {
+		logger.Log("err", "must set path to enrollment profile")
+		os.Exit(1)
 	}
 
 	// check cert and key if -tls=true
@@ -100,6 +106,7 @@ func main() {
 		"postgres",
 		*flPGconn,
 		device.Logger(logger),
+		device.EnrollProfile(*flEnrollment),
 	)
 
 	// Checkin Service
