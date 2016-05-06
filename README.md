@@ -3,7 +3,7 @@ mircomdm is a Mobile Device Management for Apple Devices(primarily OS X Macs).
 While I intend to implement all the commands defined by Apple in the spec, the current focus is on implementing the features necessary to fit Apple's new(er) management tools (MDM, VPP, DEP) into existing enterprise environments.
 
 # Overview
-This repo is under heavy development. Here are a few goals for the first usable release:
+**This repo is under heavy development. Here are a few goals for the first usable release:**
 
 * communicate with DEP endpoints to fetch/assign profiles and sync devices(in progress)
 * support InstallApplication, and InstallProfile payloads (already done)
@@ -20,5 +20,11 @@ micromdm is an open source project written as an http server in [Go](https://gol
 deployed as a single binary. This should keep development simple and allow scaling different parts as needed.
 * exposes metrics data in [Prometheus](https://prometheus.io/) format.
 * is api driven - should allow for integrations with other tools and make UI development more flexible.
+
+
+# Workflows
+An administrator can group a DEP enrollment profile, a list of applications and a list of configuration profiles into a workflow and assign the workflow to a device.  
+If a device has an assigned workflow, `micromdm` will configure the device according to the workflow. 
+If you're familiar with Munki's [manifest](https://github.com/munki/munki/wiki/Manifests) feature, workflows work in a similar way.
 
 
