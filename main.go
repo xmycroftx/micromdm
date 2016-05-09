@@ -108,14 +108,6 @@ func main() {
 		device.EnrollProfile(*flEnrollment),
 	)
 
-	// Checkin Service
-	checkinSvc := checkin.NewCheckinService(
-		checkin.Datastore(deviceDB),
-		checkin.Logger(logger),
-		checkin.Push(*flPushCert, *flPushPass),
-	)
-	checkinHandler := checkin.ServiceHandler(ctx, checkinSvc)
-
 	redisHostAddr := os.Getenv("REDIS_PORT_6379_TCP_ADDR")
 	if *flRedisconn == "" && redisHostAddr != "" {
 		*flRedisconn = getRedisConnFromENV(redisHostAddr)
@@ -139,8 +131,19 @@ func main() {
 	)
 	commandHandler := command.ServiceHandler(ctx, commandSvc)
 
+	// Checkin Service
+	checkinSvc := checkin.NewCheckinService(
+		checkin.Datastore(deviceDB),
+		checkin.Logger(logger),
+		checkin.Push(*flPushCert, *flPushPass),
+		checkin.Commands(commandSvc),
+	)
+
+	checkinHandler := checkin.ServiceHandler(ctx, checkinSvc)
 	connectSvc := connect.NewConnectService(
 		connect.Redis(commandDB),
+		connect.Commands(commandSvc),
+		connect.Devices(deviceDB),
 	)
 	connectHandler := connect.ServiceHandler(ctx, connectSvc)
 
@@ -156,7 +159,8 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/mdm/checkin", checkinHandler)
-	mux.Handle("/mdm/command", commandHandler)
+	mux.Handle("/mdm/commands", commandHandler)
+	mux.Handle("/mdm/commands/", commandHandler)
 	mux.Handle("/mdm/connect", connectHandler)
 	mux.Handle("/mdm/workflows", workflowHandler)
 	mux.Handle("/mdm/profiles", profileHandler)

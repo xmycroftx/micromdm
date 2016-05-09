@@ -24,6 +24,9 @@ func makeConnectEndpoint(svc MDMConnectService) endpoint.Endpoint {
 			if err != nil {
 				return mdmConnectResponse{Err: err}, nil
 			}
+			if req.RequestType == "DeviceConfigured" {
+				return mdmConnectResponse{}, nil
+			}
 			if total != 0 {
 				next, _, err := svc.NextCommand(req.UDID)
 				if err != nil {

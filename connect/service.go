@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -8,7 +9,10 @@ import (
 
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/micromdm/mdm"
 	"github.com/micromdm/micromdm/command"
+	"github.com/micromdm/micromdm/device"
+	"github.com/pkg/errors"
 )
 
 // MDMConnectService ...
@@ -18,21 +22,56 @@ type MDMConnectService interface {
 }
 
 type mdmConnectService struct {
-	redis command.Datastore
+	redis    command.Datastore
+	devices  device.Datastore
+	commands command.MDMCommandService
 }
 
 func (svc mdmConnectService) Acknowledge(deviceUDID, commandUUID string) (int, error) {
-	return svc.redis.DeleteCommand(deviceUDID, commandUUID)
-
+	total, err := svc.redis.DeleteCommand(deviceUDID, commandUUID)
+	if err != nil {
+		return total, err
+	}
+	if total == 0 {
+		fmt.Println("requeueing command")
+		total, err = svc.checkRequeue(deviceUDID)
+		if err != nil {
+			return total, err
+		}
+		return total, nil
+	}
+	return total, nil
 }
 
 func (svc mdmConnectService) NextCommand(deviceUDID string) ([]byte, int, error) {
 	return svc.redis.NextCommand(deviceUDID)
 }
 
+func (svc mdmConnectService) checkRequeue(deviceUDID string) (int, error) {
+	existing, err := svc.devices.GetDeviceByUDID(deviceUDID)
+	if err != nil {
+		return 0, errors.Wrap(err, "check and requeue")
+	}
+	if *existing.AwaitingConfiguration {
+		cmdRequest := &mdm.CommandRequest{
+			UDID:        deviceUDID,
+			RequestType: "DeviceConfigured",
+		}
+
+		_, err := svc.commands.NewCommand(cmdRequest)
+		if err != nil {
+			return 0, err
+		}
+		return 1, nil
+	}
+	return 0, nil
+}
+
 type config struct {
-	logger log.Logger
-	redis  command.Datastore
+	logger   log.Logger
+	redis    command.Datastore
+	devices  device.Datastore
+	commands command.MDMCommandService
 }
 
 // NewConnectService creates a new MDM Connect Service
@@ -46,7 +85,7 @@ func NewConnectService(options ...func(*config) error) MDMConnectService {
 		}
 	}
 	var svc MDMConnectService
-	svc = mdmConnectService{conf.redis}
+	svc = mdmConnectService{redis: conf.redis, devices: conf.devices, commands: conf.commands}
 	if conf.logger != nil {
 		// svc = loggingMiddleware{conf.logger, svc}
 	}
@@ -58,6 +97,22 @@ func NewConnectService(options ...func(*config) error) MDMConnectService {
 func Redis(db command.Datastore) func(*config) error {
 	return func(c *config) error {
 		c.redis = db
+		return nil
+	}
+}
+
+// Devices adds a db connection to the service
+func Devices(db device.Datastore) func(*config) error {
+	return func(c *config) error {
+		c.devices = db
+		return nil
+	}
+}
+
+// Commands adds a db connection to the service
+func Commands(svc command.MDMCommandService) func(*config) error {
+	return func(c *config) error {
+		c.commands = svc
 		return nil
 	}
 }
