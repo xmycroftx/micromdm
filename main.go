@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/go-kit/kit/log"
-	"github.com/gorilla/mux"
 	"github.com/micromdm/micromdm/checkin"
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/connect"
@@ -152,22 +151,18 @@ func main() {
 	profileSvc := profile.NewService(profile.DB(profileDB))
 	profileHandler := profile.ServiceHandler(ctx, profileSvc)
 
-	// router
-	r := mux.NewRouter()
-	r.Methods("PUT", "POST").Path("/mdm/checkin").Handler(checkinHandler)
-	r.Methods("PUT").Path("/mdm/connect").Handler(connectHandler)
-	r.Handle("/mdm/commands", commandHandler)
-	r.Methods("POST").Path("/mdm/commands").Handler(commandHandler)
-	r.Methods("GET").Path("/mdm/commands/{udid}/next").Handler(commandHandler)
-	r.Methods("DELETE").Path("/mdm/commands/{udid}/{uuid}").Handler(commandHandler)
+	deviceSvc := device.NewService(deviceDB)
+	deviceHandler := device.ServiceHandler(ctx, deviceSvc)
 
-	r.Handle("/mdm/worflows", workflowHandler)
-	r.Methods("POST").Path("/mdm/workflows").Handler(workflowHandler)
+	mux := http.NewServeMux()
+	mux.Handle("/mdm/checkin", checkinHandler)
+	mux.Handle("/mdm/command", commandHandler)
+	mux.Handle("/mdm/connect", connectHandler)
+	mux.Handle("/mdm/workflows", workflowHandler)
+	mux.Handle("/mdm/profiles", profileHandler)
+	mux.Handle("/mdm/devices/", deviceHandler)
 
-	r.Handle("/mdm/profiles", profileHandler)
-	r.Methods("POST", "GET").Path("/mdm/profiles").Handler(profileHandler)
-
-	http.Handle("/", r)
+	http.Handle("/", mux)
 	http.Handle("/metrics", stdprometheus.Handler())
 
 	serve(logger, *flTLS, *flPort, *flTLSKey, *flTLSCert)

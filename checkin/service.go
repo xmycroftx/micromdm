@@ -190,7 +190,7 @@ func ServiceHandler(ctx context.Context, svc MDMCheckinService) http.Handler {
 	)
 
 	r := mux.NewRouter()
-	r.Methods("PUT").Path("/mdm/checkin").Handler(checkinHandler)
-	r.Methods("POST").Path("/mdm/checkin").Handler(enrollmentHandler)
+	r.Handle("/mdm/checkin", enrollmentHandler).Methods("POST")
+	r.Handle("/mdm/checkin", checkinHandler).Methods("PUT")
 	return r
 }

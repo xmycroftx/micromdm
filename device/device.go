@@ -196,7 +196,8 @@ func (db pgDatastore) Save(msg string, dev *Device) error {
 	var stmt string
 	switch msg {
 	case "assign":
-		stmt = `INSERT INTO device_workflow VALUES (:device_uuid, :workflow_uuid);`
+		stmt = `INSERT INTO device_workflow VALUES (:device_uuid, :workflow_uuid)
+				ON CONFLICT DO NOTHING;`
 	}
 	_, err := db.NamedExec(stmt, dev)
 	if err != nil {
