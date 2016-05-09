@@ -132,3 +132,18 @@ func TestHTTPCreateWorkflow(t *testing.T) {
 		io.Copy(os.Stdout, resp.Body)
 	}
 }
+
+func TestHTTPListWorkflows(t *testing.T) {
+	req, err := client.NewRequest("workflows", "", jsonMedia, "GET")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := client.Do(req, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Error("Expected", http.StatusOK, "got", resp.StatusCode)
+		io.Copy(os.Stdout, resp.Body)
+	}
+}

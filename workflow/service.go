@@ -52,7 +52,7 @@ func (svc workflowService) CreateWorkflow(wfRequest *Workflow) (*Workflow, error
 
 func (svc workflowService) ListWorkflows() ([]Workflow, error) {
 	svc.debug.Log("Listing Workflows")
-	return nil, nil
+	return svc.db.GetWorkflows()
 }
 
 // NewService creates a new MDM Command Service
@@ -95,7 +95,17 @@ func ServiceHandler(ctx context.Context, svc Service) http.Handler {
 		encodeResponse,
 		commonOptions...,
 	)
+
+	listWorkflowsHandler := httptransport.NewServer(
+		ctx,
+		makeListWorkflowsEndpoint(svc),
+		decodeListWorkflowsRequest,
+		encodeResponse,
+		commonOptions...,
+	)
 	r := mux.NewRouter()
-	r.Methods("POST").Path("/mdm/workflows").Handler(newWorkflowHandler)
+
+	r.Handle("/mdm/workflows", newWorkflowHandler).Methods("POST")
+	r.Handle("/mdm/workflows", listWorkflowsHandler).Methods("GET")
 	return r
 }
