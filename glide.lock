@@ -1,5 +1,5 @@
-hash: 8fe304e9385e4fbe963eba356a9784b3217ae75b65f50178322a7e1e41950e8d
-updated: 2016-05-05T14:49:55.86880083-04:00
+hash: ed9457203c0391ff0b5911a1b1a00a0a7fad0dd8e869a26cb3aeee377656d252
+updated: 2016-05-10T08:51:32.591596325-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -7,13 +7,18 @@ imports:
   - quantile
 - name: github.com/fullsailor/pkcs7
   version: 2585af45975b11f1d7502bb6c01556c29efb54ce
+- name: github.com/garyburd/go-oauth
+  version: 719b069913e1151a73ea30d2ea4f90deda3ce234
+  subpackages:
+  - oauth
 - name: github.com/garyburd/redigo
   version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
   subpackages:
   - redis
   - internal
 - name: github.com/go-kit/kit
-  version: 5dbf809170724bbe74545ef9492328c456294259
+  version: bf1de9351592667fd8739200fa355b6a5c53adbf
+  vcs: git
   subpackages:
   - endpoint
   - log
@@ -22,7 +27,7 @@ imports:
   - transport/http
   - log/levels
 - name: github.com/go-logfmt/logfmt
-  version: 08ab82a63ef462ac643ec79e659f023891f588f5
+  version: a0ff333161fe5c2daed0ba52d1792bd3d2531b94
 - name: github.com/go-stack/stack
   version: ac4c579c437a23e1a15814c867ccb82122fb383b
 - name: github.com/golang/protobuf
@@ -49,6 +54,8 @@ imports:
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
+- name: github.com/micromdm/dep
+  version: 38c81b11544f31c2be14e0b3bcfa12f656fcc709
 - name: github.com/micromdm/mdm
   version: d64bbc40594da804b956062912d62453cad70459
 - name: github.com/pkg/errors
@@ -79,7 +86,7 @@ imports:
 - name: github.com/satori/go.uuid
   version: f9ab0dce87d815821e221626b772e3475a0d2749
 - name: golang.org/x/crypto
-  version: 019870fc9d457ee8abd13a2e93e3f2a3b55b7119
+  version: 91ab96ae987aef3e74ab78b3aaf026109d206148
   subpackages:
   - pkcs12
   - pkcs12/internal/rc2

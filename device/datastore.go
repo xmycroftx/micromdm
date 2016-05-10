@@ -39,6 +39,7 @@ var (
 	dep_profile_assigned_date = $10,
 	dep_profile_assigned_by = $11
 	RETURNING device_uuid;`
+
 	authenticateMDM = `INSERT INTO devices (
 	udid, 
 	apple_mdm_topic,

@@ -4,6 +4,8 @@ import:
   subpackages:
   - redis
 - package: github.com/go-kit/kit
+  vcs: git
+  version: master
   subpackages:
   - endpoint
   - log

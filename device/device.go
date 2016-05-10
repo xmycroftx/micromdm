@@ -4,6 +4,8 @@ import (
 	"database/sql/driver"
 	"errors"
 	"time"
+
+	"github.com/micromdm/dep"
 )
 
 // Device represents an iOS or OS X Computer
@@ -68,4 +70,21 @@ func (status *DEPProfileStatus) Scan(value interface{}) error {
 	// otherwise, return an error
 	return errors.New("failed to scan DEPProfileStatus")
 
+}
+
+// NewFromDEP returns a device from DEP response
+func NewFromDEP(dd dep.Device) *Device {
+	return &Device{
+		SerialNumber:           dd.SerialNumber,
+		Model:                  dd.Model,
+		Description:            dd.Description,
+		Color:                  dd.Color,
+		AssetTag:               dd.AssetTag,
+		DEPProfileStatus:       DEPProfileStatus(dd.ProfileStatus),
+		DEPProfileUUID:         dd.ProfileUUID,
+		DEPProfileAssignTime:   dd.ProfileAssignTime,
+		DEPProfilePushTime:     dd.ProfilePushTime,
+		DEPProfileAssignedDate: dd.DeviceAssignedDate,
+		DEPProfileAssignedBy:   dd.DeviceAssignedBy,
+	}
 }
