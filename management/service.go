@@ -7,10 +7,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrNotFound ...
+var ErrNotFound = errors.New("not found")
+
 // Service is the interface that provides methods for managing devices
 type Service interface {
 	AddProfile(prf *profile.Profile) (*profile.Profile, error)
 	Profiles() ([]profile.Profile, error)
+
 	Profile(identifier string) (*profile.Profile, error)
 	FetchDEPDevices() error
 }
@@ -29,8 +33,17 @@ func (svc service) Profiles() ([]profile.Profile, error) {
 	return svc.profiles.Profiles()
 }
 
+// Profile returns a single profile given an UUID
 func (svc service) Profile(identifier string) (*profile.Profile, error) {
-	panic("not implemented")
+	profiles, err := svc.profiles.Profiles(profile.UUID{identifier})
+	if err != nil {
+		return nil, err
+	}
+	if len(profiles) == 0 {
+		return nil, ErrNotFound
+	}
+	pf := profiles[0]
+	return &pf, nil
 }
 
 func (svc service) FetchDEPDevices() error {

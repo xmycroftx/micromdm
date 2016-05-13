@@ -17,7 +17,52 @@ import (
 	"golang.org/x/net/context"
 )
 
-var testConn = "user=micromdm password=micromdm dbname=micromdm sslmode=disable"
+func TestShowProfile(t *testing.T) {
+	server, svc := newServer(t)
+	defer teardown()
+	defer server.Close()
+
+	profileData := []byte(`{
+    "payload_identifier": "com.micromdm.example2",
+    "data" : "fooProfile"
+	}`)
+
+	testGetHTTP(t, svc, server, "foo", http.StatusBadRequest)
+	testGetHTTP(t, svc, server, "036d339c-4fe4-4d6e-a051-65fafbec8c93", http.StatusNotFound)
+
+	testAddHTTP(t, svc, server, profileData, http.StatusCreated)
+	profiles := testListHTTP(t, svc, server, http.StatusOK)
+	for _, p := range profiles {
+		returned := testGetHTTP(t, svc, server, p.UUID, http.StatusOK)
+		// check that we get what we pass in
+		if returned.PayloadIdentifier != p.PayloadIdentifier {
+			t.Fatal("expected", p.PayloadIdentifier, "got", returned.PayloadIdentifier)
+		}
+	}
+
+}
+
+func testGetHTTP(t *testing.T, svc Service, server *httptest.Server, uuid string, expectedStatus int) *profile.Profile {
+	client := http.DefaultClient
+	theURL := server.URL + "/management/v1/profiles" + "/" + uuid
+	resp, err := client.Get(theURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != expectedStatus {
+		io.Copy(os.Stdout, resp.Body)
+		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
+	}
+
+	// test decoding the result into a struct
+	var profile profile.Profile
+	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+		t.Log("failed to decode profiles from GET response")
+		t.Fatal(err)
+	}
+	return &profile
+}
 
 func TestListProfiles(t *testing.T) {
 	server, svc := newServer(t)
@@ -29,7 +74,7 @@ func TestListProfiles(t *testing.T) {
     "data" : "fooProfile"
 	}`)
 
-	testAddHTTP(t, svc, server, profileData, 200)
+	testAddHTTP(t, svc, server, profileData, http.StatusCreated)
 	testListHTTP(t, svc, server, http.StatusOK)
 
 }
@@ -54,7 +99,7 @@ func TestAddProfile(t *testing.T) {
 		},
 		{
 			in:       profileData,
-			expected: http.StatusOK,
+			expected: http.StatusCreated,
 		},
 		{
 			in:       profileData,
@@ -66,6 +111,8 @@ func TestAddProfile(t *testing.T) {
 		testAddHTTP(t, svc, server, tt.in, tt.expected)
 	}
 }
+
+var testConn = "user=micromdm password=micromdm dbname=micromdm sslmode=disable"
 
 func newServer(t *testing.T) (*httptest.Server, Service) {
 	ctx := context.Background()
@@ -86,7 +133,7 @@ func newServer(t *testing.T) (*httptest.Server, Service) {
 	return server, svc
 }
 
-func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedStatus int) {
+func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedStatus int) []profile.Profile {
 	client := http.DefaultClient
 	theURL := server.URL + "/management/v1/profiles"
 	resp, err := client.Get(theURL)
@@ -99,12 +146,13 @@ func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedSt
 		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
 	}
 
-	// test decode
+	// test decoding the result into a struct
 	var profiles []profile.Profile
 	if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
 		t.Log("failed to decode profiles from list response")
 		t.Fatal(err)
 	}
+	return profiles
 }
 
 func testAddHTTP(t *testing.T, svc Service, server *httptest.Server, profile []byte, expectedStatus int) {

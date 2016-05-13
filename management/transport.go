@@ -2,6 +2,7 @@ package management
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/micromdm/micromdm/profile"
 	"golang.org/x/net/context"
 )
+
+var errBadUUID = errors.New("request must have a valid uuid")
 
 // ServiceHandler returns an HTTP Handler for the management service
 func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http.Handler {
@@ -41,12 +44,20 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		encodeResponse,
 		opts...,
 	)
+	showProfileHandler := kithttp.NewServer(
+		ctx,
+		makeShowProfileEndpoint(svc),
+		decodeShowProfileRequest,
+		encodeResponse,
+		opts...,
+	)
 
 	r := mux.NewRouter()
 
 	r.Handle("/management/v1/devices/fetch", fetchDEPHandler).Methods("POST")
 	r.Handle("/management/v1/profiles", addProfileHandler).Methods("POST")
 	r.Handle("/management/v1/profiles", listProfilesHandler).Methods("GET")
+	r.Handle("/management/v1/profiles/{uuid}", showProfileHandler).Methods("GET")
 
 	return r
 }
@@ -69,6 +80,19 @@ func decodeAddProfileRequest(_ context.Context, r *http.Request) (interface{}, e
 
 func decodeListProfilesRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return listProfilesRequest{}, nil
+}
+
+func decodeShowProfileRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	uuid, ok := vars["uuid"]
+	if !ok {
+		return nil, errBadRouting
+	}
+	// simple validation
+	if len(uuid) != 36 {
+		return nil, errBadUUID
+	}
+	return showProfileRequest{UUID: uuid}, nil
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -109,7 +133,9 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 		err = httperr.Err
 	}
 	switch err {
-	case errEmptyRequest:
+	case ErrNotFound:
+		w.WriteHeader(http.StatusNotFound)
+	case errEmptyRequest, errBadUUID:
 		w.WriteHeader(http.StatusBadRequest)
 	case profile.ErrExists:
 		w.WriteHeader(http.StatusConflict)

@@ -40,6 +40,8 @@ type addProfileResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
+func (r addProfileResponse) status() int { return 201 }
+
 func (r addProfileResponse) error() error { return r.Err }
 
 func makeAddProfileEndpoint(svc Service) endpoint.Endpoint {
@@ -73,5 +75,27 @@ func makeListProfilesEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		pf, err := svc.Profiles()
 		return listProfilesResponse{Err: err, profiles: pf}, nil
+	}
+}
+
+type showProfileRequest struct {
+	UUID string
+}
+
+type showProfileResponse struct {
+	*profile.Profile
+	Err error `json:"error,omitempty"`
+}
+
+func (r showProfileResponse) error() error { return r.Err }
+
+func makeShowProfileEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(showProfileRequest)
+		pf, err := svc.Profile(req.UUID)
+		if err != nil {
+			return showProfileResponse{Err: err}, nil
+		}
+		return showProfileResponse{Profile: pf}, nil
 	}
 }
