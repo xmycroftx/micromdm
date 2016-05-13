@@ -3,106 +3,95 @@ package profile
 import (
 	"database/sql"
 	"fmt"
-	"os"
+	"strings"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/pkg/errors"
-	"golang.org/x/net/context"
-
-	"github.com/go-kit/kit/log/levels"
+	kitlog "github.com/go-kit/kit/log"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgres driver
+	"github.com/pkg/errors"
 )
 
-var (
-	// ErrNoRowsModified is returned if insert didn't produce results
-	ErrNoRowsModified = errors.New("db: no rows affected")
-	// ErrExists is returned by AddProfile when a profile already exists
-	ErrExists = errors.New("profile already exists. each profile must have a unique identifier")
-	//sql stmt
-	createProfileStmt = `INSERT INTO profiles (identifier, data ) VALUES ($1, $2) 
-						 ON CONFLICT ON CONSTRAINT profiles_identifier_key DO NOTHING
-						 RETURNING profile_uuid;`
-	selectProfilesStmt = `SELECT profile_uuid, identifier, data FROM profiles`
-)
+// ErrExists is returned if a profile already exists
+var ErrExists = errors.New("profile already exists. each profile must have a unique identifier")
 
 // Datastore manages profiles in a database
 type Datastore interface {
-	AddProfile(*Profile) (*Profile, error)
-	GetProfiles() ([]Profile, error)
+	// Add adds a profile to the datastore,
+	// If a profile already exists, an error will be returned
+	Add(pr *Profile) (*Profile, error)
+
+	// Profiles can query the datastore for one or more profiles
+	// and accepts one or more params as filters
+	// Example: Profiles(Identifier{"com.example.id")}
+	Profiles(params ...interface{}) ([]Profile, error)
 }
 
-type pgDatastore struct {
-	info  log.Logger
-	debug log.Logger
+// whereer is for building args passed into Profiles()
+type whereer interface {
+	where() string
+}
+
+// Identifier is a PayloadIdentifier  filter which can be passed as a param to Profiles()
+type Identifier struct{ PayloadIdentifier string }
+
+func (p Identifier) where() string {
+	return fmt.Sprintf("identifier='%s'", p.PayloadIdentifier)
+}
+
+// UUID is a Profile UUID filter which can be passed as a param to Profiles()
+type UUID struct{ UUID string }
+
+func (p UUID) where() string {
+	return fmt.Sprintf("profile_uuid='%s'", p.UUID)
+}
+
+type pgStore struct {
 	*sqlx.DB
 }
 
-func (db pgDatastore) AddProfile(pf *Profile) (*Profile, error) {
-	err := db.QueryRow(createProfileStmt, pf.PayloadIdentifier, pf.Data).Scan(&pf.UUID)
+func (store pgStore) Add(prf *Profile) (*Profile, error) {
+	err := store.QueryRow(addProfileStmt, prf.PayloadIdentifier, prf.ProfileData).Scan(&prf.UUID)
 	if err == sql.ErrNoRows {
-		db.debug.Log("action", "AddProfile", "profile", pf.PayloadIdentifier, "err", "exists", "status", "failure")
 		return nil, ErrExists
 	}
 	if err != nil {
-		db.info.Log("err", err, "profile", pf.PayloadIdentifier)
-		return nil, errors.Wrap(err, "create profile failed")
+		return nil, errors.Wrap(err, "pgStore add profile")
 	}
-	db.debug.Log("action", "AddProfile", "profile", pf.PayloadIdentifier, "uuid", pf.UUID, "status", "success")
-	return pf, nil
+	return prf, nil
 }
 
-func (db pgDatastore) GetProfiles() ([]Profile, error) {
-	var profiles []Profile
-	err := db.Select(&profiles, selectProfilesStmt)
-	if err != nil {
-		db.debug.Log("action", "GetProfiles", "err", err)
-		return nil, err
-	}
-	return profiles, nil
-}
-
-// boilerplate
-
-type config struct {
-	db      Datastore
-	context context.Context
-	logger  log.Logger
-	debug   bool
-}
-
-func infoLogger(conf *config) log.Logger {
-	return levels.New(conf.logger).Info()
-}
-
-func debugLogger(conf *config) log.Logger {
-	if conf.debug {
-		logger := levels.New(conf.logger).Debug()
-		ctx := log.NewContext(logger).With("caller", log.DefaultCaller)
-		return ctx
-	}
-	return log.NewNopLogger()
-}
-
-// NewDB creates a new databases connection
-func NewDB(driver, conn string, options ...func(*config) error) Datastore {
-	conf := &config{
-		logger: log.NewNopLogger(),
-	}
-	defaultLogger := log.NewLogfmtLogger(os.Stderr)
-	for _, option := range options {
-		if err := option(conf); err != nil {
-			defaultLogger.Log("err", err)
-			os.Exit(1)
+func (store pgStore) Profiles(params ...interface{}) ([]Profile, error) {
+	stmt := selectProfilesStmt
+	var where []string
+	for _, param := range params {
+		if f, ok := param.(whereer); ok {
+			where = append(where, f.where())
 		}
 	}
+
+	if len(where) != 0 {
+		whereFilter := strings.Join(where, ",")
+		stmt = fmt.Sprintf("%s WHERE %s", selectProfilesStmt, whereFilter)
+	}
+
+	var profiles []Profile
+	err := store.Select(&profiles, stmt)
+	if err != nil {
+		return nil, errors.Wrap(err, "pgStore Profiles")
+	}
+
+	return profiles, nil
+
+}
+
+//NewDB creates a Datastore
+func NewDB(driver, conn string, logger kitlog.Logger) (Datastore, error) {
 	switch driver {
 	case "postgres":
 		db, err := sqlx.Open(driver, conn)
 		if err != nil {
-			conf.logger.Log("err", err)
-			os.Exit(1)
+			return nil, errors.Wrap(err, "device datastore")
 		}
 		var dbError error
 		maxAttempts := 20
@@ -111,28 +100,26 @@ func NewDB(driver, conn string, options ...func(*config) error) Datastore {
 			if dbError == nil {
 				break
 			}
-			conf.logger.Log("msg", fmt.Sprintf("could not connect to postgres: %v", dbError))
+			logger.Log("msg", fmt.Sprintf("could not connect to postgres: %v", dbError))
 			time.Sleep(time.Duration(attempts) * time.Second)
 		}
 		if dbError != nil {
-			conf.logger.Log("err", dbError)
-			os.Exit(1)
+			return nil, errors.Wrap(dbError, "device datastore")
 		}
 		migrate(db)
-		// TODO: configurable with default
-		db.SetMaxOpenConns(5)
-		store := pgDatastore{
-			info:  infoLogger(conf),
-			debug: debugLogger(conf),
-			DB:    db,
-		}
-		return store
+		return pgStore{DB: db}, nil
 	default:
-		conf.logger.Log("err", "unknown driver")
-		os.Exit(1)
-		return nil
+		return nil, errors.New("unknown driver")
 	}
 }
+
+// sql statements
+var (
+	addProfileStmt = `INSERT INTO profiles (identifier, profile_data) VALUES ($1, $2) 
+						 ON CONFLICT ON CONSTRAINT profiles_identifier_key DO NOTHING
+						 RETURNING profile_uuid;`
+	selectProfilesStmt = `SELECT profile_uuid, identifier FROM profiles`
+)
 
 func migrate(db *sqlx.DB) {
 	schema := `
@@ -141,7 +128,7 @@ func migrate(db *sqlx.DB) {
 	  profile_uuid uuid PRIMARY KEY 
 	            DEFAULT uuid_generate_v4(), 
 	  identifier text UNIQUE NOT NULL,
-	  data bytea
+	  profile_data bytea
 	  );`
 
 	db.MustExec(schema)

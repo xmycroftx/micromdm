@@ -1,6 +1,8 @@
 package management
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,10 +13,115 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/micromdm/dep"
 	"github.com/micromdm/micromdm/device"
+	"github.com/micromdm/micromdm/profile"
 	"golang.org/x/net/context"
 )
 
 var testConn = "user=micromdm password=micromdm dbname=micromdm sslmode=disable"
+
+func TestListProfiles(t *testing.T) {
+	server, svc := newServer(t)
+	defer teardown()
+	defer server.Close()
+
+	profileData := []byte(`{
+    "payload_identifier": "com.micromdm.example2",
+    "data" : "fooProfile"
+	}`)
+
+	testAddHTTP(t, svc, server, profileData, 200)
+	testListHTTP(t, svc, server, http.StatusOK)
+
+}
+
+func TestAddProfile(t *testing.T) {
+	server, svc := newServer(t)
+	defer teardown()
+	defer server.Close()
+
+	profileData := []byte(`{
+    "payload_identifier": "com.micromdm.example2",
+    "data" : "fooProfile"
+	}`)
+
+	var addTests = []struct {
+		in       []byte
+		expected int
+	}{
+		{
+			in:       nil,
+			expected: http.StatusBadRequest,
+		},
+		{
+			in:       profileData,
+			expected: http.StatusOK,
+		},
+		{
+			in:       profileData,
+			expected: http.StatusConflict,
+		},
+	}
+
+	for _, tt := range addTests {
+		testAddHTTP(t, svc, server, tt.in, tt.expected)
+	}
+}
+
+func newServer(t *testing.T) (*httptest.Server, Service) {
+	ctx := context.Background()
+	l := log.NewLogfmtLogger(os.Stderr)
+	logger := log.NewContext(l).With("source", "testing")
+	ds, err := device.NewDB("postgres", testConn, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps, err := profile.NewDB("postgres", testConn, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	svc := NewService(ds, ps, nil)
+	handler := ServiceHandler(ctx, svc, logger)
+	server := httptest.NewServer(handler)
+	return server, svc
+}
+
+func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedStatus int) {
+	client := http.DefaultClient
+	theURL := server.URL + "/management/v1/profiles"
+	resp, err := client.Get(theURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != expectedStatus {
+		io.Copy(os.Stdout, resp.Body)
+		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
+	}
+
+	// test decode
+	var profiles []profile.Profile
+	if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
+		t.Log("failed to decode profiles from list response")
+		t.Fatal(err)
+	}
+}
+
+func testAddHTTP(t *testing.T, svc Service, server *httptest.Server, profile []byte, expectedStatus int) {
+	body := &nopCloser{bytes.NewBuffer(profile)}
+
+	client := http.DefaultClient
+	theURL := server.URL + "/management/v1/profiles"
+	resp, err := client.Post(theURL, "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != expectedStatus {
+		io.Copy(os.Stdout, resp.Body)
+		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
+	}
+}
 
 func TestFetchDEPDevices(t *testing.T) {
 	ctx := context.Background()
@@ -37,7 +144,7 @@ func TestFetchDEPDevices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := NewService(ds, dc)
+	svc := NewService(ds, nil, dc)
 	handler := ServiceHandler(ctx, svc, logger)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -55,6 +162,13 @@ func TestFetchDEPDevices(t *testing.T) {
 	}
 }
 
+// a face io.ReadCloser for constructing request Body
+type nopCloser struct {
+	io.Reader
+}
+
+func (nopCloser) Close() error { return nil }
+
 func teardown() {
 	db, err := sqlx.Open("postgres", testConn)
 	if err != nil {
@@ -66,6 +180,7 @@ func teardown() {
 	DROP TABLE IF EXISTS devices;
 	DROP INDEX IF EXISTS devices.serial_idx;
 	DROP INDEX IF EXISTS devices.udid_idx;
+	DROP TABLE IF EXISTS profiles;
 	`
 	db.MustExec(drop)
 	defer db.Close()

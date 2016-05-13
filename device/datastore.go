@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-kit/kit/log"
+	kitlog "github.com/go-kit/kit/log"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgres driver
 	"github.com/pkg/errors"
@@ -124,7 +124,7 @@ func (store pgStore) New(src string, d *Device) (string, error) {
 }
 
 //NewDB creates a Datastore
-func NewDB(driver, conn string, logger log.Logger) (Datastore, error) {
+func NewDB(driver, conn string, logger kitlog.Logger) (Datastore, error) {
 	switch driver {
 	case "postgres":
 		db, err := sqlx.Open(driver, conn)
