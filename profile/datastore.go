@@ -91,7 +91,7 @@ func NewDB(driver, conn string, logger kitlog.Logger) (Datastore, error) {
 	case "postgres":
 		db, err := sqlx.Open(driver, conn)
 		if err != nil {
-			return nil, errors.Wrap(err, "device datastore")
+			return nil, errors.Wrap(err, "profile datastore")
 		}
 		var dbError error
 		maxAttempts := 20
@@ -104,7 +104,7 @@ func NewDB(driver, conn string, logger kitlog.Logger) (Datastore, error) {
 			time.Sleep(time.Duration(attempts) * time.Second)
 		}
 		if dbError != nil {
-			return nil, errors.Wrap(dbError, "device datastore")
+			return nil, errors.Wrap(dbError, "profile datastore")
 		}
 		migrate(db)
 		return pgStore{DB: db}, nil
