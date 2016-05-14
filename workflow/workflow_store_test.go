@@ -84,7 +84,7 @@ func TestDatastoreCreate(t *testing.T) {
 	}
 
 	for _, tt := range createTests {
-		_, err := ds.Create(tt.in)
+		_, err := ds.CreateWorkflow(tt.in)
 		if !tt.shouldErr {
 			checkErr(err)
 		}

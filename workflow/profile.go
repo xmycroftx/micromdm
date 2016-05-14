@@ -1,4 +1,4 @@
-package profile
+package workflow
 
 // Profile is an Apple Configuration profile
 type Profile struct {
