@@ -3,25 +3,30 @@ package workflow
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgres driver
-	"github.com/micromdm/micromdm/profile"
 	"github.com/pkg/errors"
 )
 
 // ErrExists is returned if a workflow already exists
 var ErrExists = errors.New("workflow already exists. each workflow must have a unique name")
 
+// Profile is configuration profile in a workflow
+type Profile struct {
+	UUID string
+}
+
 // Workflow describes a workflow that a device will execute
 // A workflow contains a list of configuration profiles,
 // Applications and included workflows
 type Workflow struct {
-	UUID     string            `json:"uuid" db:"workflow_uuid"`
-	Name     string            `json:"name" db:"name"`
-	Profiles []profile.Profile `json:"profiles"`
+	UUID     string    `json:"uuid" db:"workflow_uuid"`
+	Name     string    `json:"name" db:"name"`
+	Profiles []Profile `json:"profiles"`
 	// Applications      []application
 	// IncludedWorkflows []Workflow
 }
@@ -46,11 +51,64 @@ func (store pgStore) Create(wf *Workflow) (*Workflow, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "pgStore create workflow")
 	}
+
+	profiles := wf.Profiles
+	if err := store.addProfiles(wf.UUID, profiles...); err != nil {
+		return nil, err
+	}
+
 	return wf, nil
 }
 
+func (store pgStore) addProfiles(wfUUID string, profiles ...Profile) error {
+	if len(profiles) == 0 {
+		return nil
+	}
+
+	for _, prf := range profiles {
+		if err := store.addProfile(wfUUID, prf.UUID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (store pgStore) addProfile(wfUUID, pfUUID string) error {
+	addProfileStmt := `INSERT INTO workflow_profile (workflow_uuid, profile_uuid) VALUES ($1, $2)
+								  ON CONFLICT ON CONSTRAINT workflow_profile_pkey DO NOTHING;`
+
+	_, err := store.Exec(addProfileStmt, wfUUID, pfUUID)
+	if err != nil {
+		return errors.Wrap(err, "pgStore add profile to workflow")
+	}
+	return nil
+}
+
 func (store pgStore) Workflows(params ...interface{}) ([]Workflow, error) {
-	panic("not implemented")
+	stmt := selectWorkflowsStmt
+	var where []string
+	for _, param := range params {
+		if f, ok := param.(whereer); ok {
+			where = append(where, f.where())
+		}
+	}
+
+	if len(where) != 0 {
+		whereFilter := strings.Join(where, ",")
+		stmt = fmt.Sprintf("%s WHERE %s", selectWorkflowsStmt, whereFilter)
+	}
+
+	var workflows []Workflow
+	err := store.Select(&workflows, stmt)
+	if err != nil {
+		return nil, errors.Wrap(err, "pgStore Workflows")
+	}
+	return workflows, nil
+}
+
+// whereer is for building args passed into Profiles()
+type whereer interface {
+	where() string
 }
 
 // sql statements
@@ -58,7 +116,7 @@ var (
 	createWorkflowStmt = `INSERT INTO workflows (name) VALUES ($1) 
 						 ON CONFLICT ON CONSTRAINT workflows_name_key DO NOTHING
 						 RETURNING workflow_uuid;`
-	// selectProfilesStmt = `SELECT profile_uuid, identifier FROM profiles`
+	selectWorkflowsStmt = `SELECT workflow_uuid, name FROM profiles`
 )
 
 //NewDB creates a Datastore

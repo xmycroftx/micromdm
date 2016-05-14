@@ -1,13 +1,39 @@
 package workflow
 
 import (
+	"math/rand"
 	"os"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/jmoiron/sqlx"
-	"github.com/micromdm/micromdm/profile"
 )
+
+func TestDatastoreWorkflows(t *testing.T) {
+	// ds := datastore(t)
+	defer teardown()
+}
+
+func (wf Workflow) Generate(rand *rand.Rand, size int) reflect.Value {
+	name := randomString(16)
+	randomWorkflow := Workflow{
+		Name: name,
+	}
+
+	return reflect.ValueOf(randomWorkflow)
+}
+
+func randomString(strlen int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	result := make([]byte, strlen)
+	for i := 0; i < strlen; i++ {
+		result[i] = chars[rand.Intn(len(chars))]
+	}
+	return string(result)
+}
 
 func TestNewDB(t *testing.T) {
 	_ = datastore(t)
@@ -49,18 +75,16 @@ func TestDatastoreCreate(t *testing.T) {
 		{
 			in: &Workflow{
 				Name: "exampleWorkflowWithProfiles",
-				Profiles: []profile.Profile{
-					profile.Profile{
-						PayloadIdentifier: "com.example.workflow.profile",
-					},
+				Profiles: []Profile{
+					Profile{UUID: "c7616875-df2d-4fe5-9c1e-0cb36c1ede8a"},
 				},
 			},
-			shouldErr: false,
+			shouldErr: true,
 		},
 	}
 
 	for _, tt := range createTests {
-		wf, err := ds.Create(tt.in)
+		_, err := ds.Create(tt.in)
 		if !tt.shouldErr {
 			checkErr(err)
 		}
@@ -69,15 +93,7 @@ func TestDatastoreCreate(t *testing.T) {
 				t.Fatal("expected", tt.testErr, "got", err)
 			}
 		}
-		profiles := tt.in.Profiles
 		// check profiles
-		// this test should not pass...
-		if len(profiles) != 0 {
-			if len(profiles) != len(wf.Profiles) {
-				t.Log("checking profile count")
-				t.Fatal("expected", len(profiles), "got", len(wf.Profiles))
-			}
-		}
 	}
 }
 
