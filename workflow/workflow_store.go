@@ -3,7 +3,6 @@ package workflow
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -13,7 +12,7 @@ var (
 	createWorkflowStmt = `INSERT INTO workflows (name) VALUES ($1) 
 						 ON CONFLICT ON CONSTRAINT workflows_name_key DO NOTHING
 						 RETURNING workflow_uuid;`
-	selectWorkflowsStmt = `SELECT workflow_uuid, name FROM profiles`
+	selectWorkflowsStmt = `SELECT workflow_uuid, name FROM workflows`
 )
 
 // WrkflowUUID is a filter we can add as a parameter to narrow down the list of returned results
@@ -34,12 +33,10 @@ func (store pgStore) CreateWorkflow(wf *Workflow) (*Workflow, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "pgStore create workflow")
 	}
-
 	profiles := wf.Profiles
 	if err := store.addProfiles(wf.UUID, profiles...); err != nil {
 		return nil, err
 	}
-
 	return wf, nil
 }
 
@@ -47,7 +44,6 @@ func (store pgStore) addProfiles(wfUUID string, profiles ...Profile) error {
 	if len(profiles) == 0 {
 		return nil
 	}
-
 	for _, prf := range profiles {
 		if err := store.addProfile(wfUUID, prf.UUID); err != nil {
 			return err
@@ -69,18 +65,7 @@ func (store pgStore) addProfile(wfUUID, pfUUID string) error {
 
 func (store pgStore) Workflows(params ...interface{}) ([]Workflow, error) {
 	stmt := selectWorkflowsStmt
-	var where []string
-	for _, param := range params {
-		if f, ok := param.(whereer); ok {
-			where = append(where, f.where())
-		}
-	}
-
-	if len(where) != 0 {
-		whereFilter := strings.Join(where, ",")
-		stmt = fmt.Sprintf("%s WHERE %s", selectWorkflowsStmt, whereFilter)
-	}
-
+	stmt = addWhereFilters(stmt, params...)
 	var workflows []Workflow
 	err := store.Select(&workflows, stmt)
 	if err != nil {

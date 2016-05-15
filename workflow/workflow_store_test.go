@@ -4,20 +4,47 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+	"testing/quick"
 )
 
-func TestDatastoreWorkflows(t *testing.T) {
-	// ds := datastore(t)
+func TestRetrieveWorkflows(t *testing.T) {
+	ds := datastore(t)
 	defer teardown()
-}
-
-func (wf Workflow) Generate(rand *rand.Rand, size int) reflect.Value {
-	name := randomString(16)
-	randomWorkflow := Workflow{
-		Name: name,
+	testWorkflows := addTestWorkflows(t, ds, 5)
+	workflows, err := ds.Workflows()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	return reflect.ValueOf(randomWorkflow)
+	if len(workflows) != 5 {
+		t.Error("expected", 5, "got", len(workflows))
+	}
+
+	for _, p := range testWorkflows {
+		byUUID, err := ds.Workflows(WrkflowUUID{p.UUID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(byUUID) != 1 {
+			t.Log("filtering by UUID should only return 1 result")
+			t.Fatal("expected", 1, "got", len(byUUID))
+		}
+
+		uuid := byUUID[0].UUID
+		if p.UUID != uuid {
+			t.Log("result should have the same UUID as the one in the query")
+			t.Fatal("expected", p.UUID, "got", uuid)
+
+		}
+	}
+
+	// test with error
+	badUUIDQuery := ProfileUUID{"bad_uuid"}
+	_, err = ds.Workflows(badUUIDQuery)
+	if err == nil {
+		t.Fatal("expected an error but got nil")
+
+	}
 }
 
 var createWorkflowTests = []struct {
@@ -53,6 +80,25 @@ var createWorkflowTests = []struct {
 	},
 }
 
+func TestDatastoreCreateWorkflowWithProfiles(t *testing.T) {
+	ds := datastore(t)
+	defer teardown()
+	testProfiles := addTestProfiles(t, ds, 5)
+
+	wf := &Workflow{
+		Name:     "has_profiles",
+		Profiles: testProfiles,
+	}
+	wf, err := ds.CreateWorkflow(wf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wf.UUID == "" {
+		t.Fatal("expected nonempty uuid result")
+	}
+
+}
+
 func TestDatastoreCreateWorkflow(t *testing.T) {
 	ds := datastore(t)
 	defer teardown()
@@ -73,6 +119,39 @@ func TestDatastoreCreateWorkflow(t *testing.T) {
 				t.Fatal("expected", tt.testErr, "got", err)
 			}
 		}
-		// check profiles
 	}
+}
+
+func addTestWorkflows(t *testing.T, ds Datastore, numWorkflows int) []Workflow {
+	var workflows []Workflow
+	for i := 0; i < numWorkflows; i++ {
+		input := randomWorkflow()
+		newWorkflow, err := ds.CreateWorkflow(&input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		workflows = append(workflows, *newWorkflow)
+	}
+	return workflows
+
+}
+
+func randomWorkflow() Workflow {
+	vrf, ok := quick.Value(reflect.TypeOf(Workflow{}), rand.New(rand.NewSource(1)))
+	if !ok {
+		panic("randomProfile: no value")
+	}
+	if f, ok := vrf.Interface().(Workflow); ok {
+		return f
+	}
+	return Workflow{}
+}
+
+func (wf Workflow) Generate(rand *rand.Rand, size int) reflect.Value {
+	name := randomString(16)
+	randomWorkflow := Workflow{
+		Name: name,
+	}
+
+	return reflect.ValueOf(randomWorkflow)
 }
