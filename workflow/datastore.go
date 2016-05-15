@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	kitlog "github.com/go-kit/kit/log"
@@ -15,15 +16,21 @@ type Datastore interface {
 	// Create adds a new workflow to the datastore
 	CreateWorkflow(wf *Workflow) (*Workflow, error)
 
+	// Workflows can query the datastore for workflows
+	// Workflows accepts one or more params as filters
+	// to narrow down the number of results
 	Workflows(params ...interface{}) ([]Workflow, error)
 
 	// CreateProfile adds a new profile to the datastore,
 	// If a profile already exists, an error will be returned
-	CreateProfile(pr *Profile) (*Profile, error)
+	CreateProfile(p *Profile) (*Profile, error)
 
-	// Profiles can query the datastore for one or more profiles
-	// and accepts one or more params as filters
-	// Example: Profiles(Identifier{"com.example.id")}
+	// DeleteProfile removes a profile from the datastore
+	DeleteProfile(pr *Profile) error
+
+	// Profiles can query the datastore for profiles
+	// Profiles accepts one or more params as filters
+	// to narrow down the number of results
 	Profiles(params ...interface{}) ([]Profile, error)
 }
 
@@ -34,6 +41,22 @@ type pgStore struct {
 // whereer is for building args passed into a method which finds resources
 type whereer interface {
 	where() string
+}
+
+// add WHERE clause from params
+func addWhereFilters(stmt string, params ...interface{}) string {
+	var where []string
+	for _, param := range params {
+		if f, ok := param.(whereer); ok {
+			where = append(where, f.where())
+		}
+	}
+
+	if len(where) != 0 {
+		whereFilter := strings.Join(where, ",")
+		stmt = fmt.Sprintf("%s WHERE %s", selectProfilesStmt, whereFilter)
+	}
+	return stmt
 }
 
 //NewDB creates a Datastore
@@ -76,7 +99,7 @@ func migrate(db *sqlx.DB) {
 	CREATE TABLE IF NOT EXISTS profiles (
 	  profile_uuid uuid PRIMARY KEY 
 	            DEFAULT uuid_generate_v4(), 
-	  identifier text UNIQUE NOT NULL,
+	  payload_identifier text UNIQUE NOT NULL CHECK (payload_identifier <> ''),
 	  profile_data bytea
 	  );
 

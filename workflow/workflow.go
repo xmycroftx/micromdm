@@ -2,8 +2,8 @@ package workflow
 
 import "errors"
 
-// ErrExists is returned if a workflow already exists
-var ErrExists = errors.New("workflow already exists. each workflow must have a unique name")
+// ErrExists is returned when trying to add a resource which already exists
+var ErrExists = errors.New("resource already exists in the datastore")
 
 // Workflow describes a workflow that a device will execute
 // A workflow contains a list of configuration profiles,

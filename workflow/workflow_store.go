@@ -16,6 +16,15 @@ var (
 	selectWorkflowsStmt = `SELECT workflow_uuid, name FROM profiles`
 )
 
+// WrkflowUUID is a filter we can add as a parameter to narrow down the list of returned results
+type WrkflowUUID struct {
+	UUID string
+}
+
+func (p WrkflowUUID) where() string {
+	return fmt.Sprintf("workflow_uuid = '%s'", p.UUID)
+}
+
 // Create stores a new workflow in Postgres
 func (store pgStore) CreateWorkflow(wf *Workflow) (*Workflow, error) {
 	err := store.QueryRow(createWorkflowStmt, wf.Name).Scan(&wf.UUID)
