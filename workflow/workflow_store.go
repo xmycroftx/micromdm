@@ -44,6 +44,8 @@ func (store pgStore) CreateWorkflow(wf *Workflow) (*Workflow, error) {
 	return wf, nil
 }
 
+// UpdateWorkflow updates a workflow in the datastore,
+// replacing profiles, applications and included workflows
 func (store pgStore) UpdateWorkflow(wf *Workflow) (*Workflow, error) {
 	if wf.UUID == "" || wf.Name == "" {
 		return nil, errors.New("workflow must have UUID or name to be updated")
@@ -64,8 +66,9 @@ func (store pgStore) UpdateWorkflow(wf *Workflow) (*Workflow, error) {
 	return &retWf, nil
 }
 
+// updateProfiles updates profiles in the datastore for a specific workflow
 func (store pgStore) updateProfiles(updated, inDatastore *Workflow) error {
-	// if retWf has some profiles which are missing in the update request
+	// if inDatastore has some profiles which are missing in the updated,
 	// remove them
 	for _, p := range inDatastore.Profiles {
 		if !updated.HasProfile(p.PayloadIdentifier) {
@@ -75,7 +78,7 @@ func (store pgStore) updateProfiles(updated, inDatastore *Workflow) error {
 		}
 	}
 
-	// if retWF is missing a profile, add it
+	// if inDatastore is missing a profile, add it
 	for _, p := range updated.Profiles {
 		if !inDatastore.HasProfile(p.PayloadIdentifier) {
 			if err := store.addProfile(inDatastore.UUID, p.UUID); err != nil {
@@ -86,6 +89,7 @@ func (store pgStore) updateProfiles(updated, inDatastore *Workflow) error {
 	return nil
 }
 
+// addProfiles add
 func (store pgStore) addProfiles(wfUUID string, profiles ...Profile) error {
 	if len(profiles) == 0 {
 		return nil
@@ -122,6 +126,7 @@ func (store pgStore) removeProfile(wfUUID, pfUUID string) error {
 	return nil
 }
 
+// find workflows in datastore
 func (store pgStore) Workflows(params ...interface{}) ([]Workflow, error) {
 	stmt := selectWorkflowsStmt
 	stmt = addWhereFilters(stmt, params...)
@@ -142,6 +147,7 @@ func (store pgStore) Workflows(params ...interface{}) ([]Workflow, error) {
 	return withProfiles, nil
 }
 
+// find profiles for a workflow
 func (store pgStore) findProfilesForWorkflow(wfUUID string) ([]Profile, error) {
 	var profiles []Profile
 	err := store.Select(&profiles, getProfilesForWorkflowStmt, wfUUID)
