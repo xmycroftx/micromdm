@@ -67,6 +67,15 @@ func TestRetrieveProfiles(t *testing.T) {
 			t.Fatal("expected", p.UUID, "got", uuid)
 
 		}
+
+		byPayloadIdentifier, err := ds.Profiles(PayloadIdentifier{p.PayloadIdentifier})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(byPayloadIdentifier) != 1 {
+			t.Log("filtering by PayloadIdentifier should only return 1 result")
+			t.Fatal("expected", 1, "got", len(byPayloadIdentifier))
+		}
 	}
 
 	badUUIDQuery := ProfileUUID{"bad_uuid"}
