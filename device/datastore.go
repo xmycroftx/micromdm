@@ -226,6 +226,6 @@ func migrate(db *sqlx.DB) {
 	  dep_device boolean,
 	  awaiting_configuration boolean
 	  );
-	  CREATE UNIQUE INDEX serial_idx ON devices (serial_number);`
+	  CREATE UNIQUE INDEX IF NOT EXISTS serial_idx ON devices (serial_number);`
 	db.MustExec(schema)
 }

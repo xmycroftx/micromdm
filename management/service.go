@@ -43,7 +43,7 @@ func (svc service) Profiles() ([]workflow.Profile, error) {
 
 // Profile returns a single profile given an UUID
 func (svc service) Profile(uuid string) (*workflow.Profile, error) {
-	profiles, err := svc.workflows.Profiles(workflow.ProfileUUID{uuid})
+	profiles, err := svc.workflows.Profiles(workflow.ProfileUUID{UUID: uuid})
 	if err != nil {
 		return nil, err
 	}
