@@ -15,3 +15,13 @@ type Workflow struct {
 	// Applications      []application
 	// IncludedWorkflows []Workflow
 }
+
+// HasProfile checks if a profile is present in the workflow
+func (wf Workflow) HasProfile(pi string) bool {
+	for _, p := range wf.Profiles {
+		if p.PayloadIdentifier == pi {
+			return true
+		}
+	}
+	return false
+}

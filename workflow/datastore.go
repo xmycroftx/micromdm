@@ -21,6 +21,9 @@ type Datastore interface {
 	// to narrow down the number of results
 	Workflows(params ...interface{}) ([]Workflow, error)
 
+	// UpdateWorkflow saves changes to a workflow in the datastore
+	UpdateWorkflow(wf *Workflow) (*Workflow, error)
+
 	// CreateProfile adds a new profile to the datastore,
 	// If a profile already exists, an error will be returned
 	CreateProfile(p *Profile) (*Profile, error)

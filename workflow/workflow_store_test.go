@@ -7,6 +7,33 @@ import (
 	"testing/quick"
 )
 
+func TestUpdateWorkflow(t *testing.T) {
+	ds := datastore(t)
+	defer teardown()
+	testProfiles := addTestProfiles(t, ds, 10)
+	testWorkflows := addTestWorkflows(t, ds, 5)
+	addProfileWorkflow := testWorkflows[0]
+	addProfileWorkflow.Profiles = append(addProfileWorkflow.Profiles, testProfiles[0])
+	_, err := ds.UpdateWorkflow(&addProfileWorkflow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := ds.Workflows(WrkflowUUID{addProfileWorkflow.UUID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !updated[0].HasProfile(testProfiles[0].PayloadIdentifier) {
+		t.Fatal("expected workflow to have added profiles")
+	}
+
+	remProfileWf := updated[0]
+	remProfileWf.Profiles = []Profile{}
+	_, err = ds.UpdateWorkflow(&remProfileWf)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRetrieveWorkflows(t *testing.T) {
 	ds := datastore(t)
 	defer teardown()
