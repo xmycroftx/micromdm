@@ -23,9 +23,10 @@ var (
 	dep_profile_assign_time,
 	dep_profile_push_time,
 	dep_profile_assigned_date,
-	dep_profile_assigned_by
+	dep_profile_assigned_by,
+	dep_device
 	) 
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	ON CONFLICT (serial_number)
 	DO UPDATE SET
 	model = $2,
@@ -37,7 +38,8 @@ var (
 	dep_profile_assign_time = $8,
 	dep_profile_push_time = $9,
 	dep_profile_assigned_date = $10,
-	dep_profile_assigned_by = $11
+	dep_profile_assigned_by = $11,
+	dep_device = $12
 	RETURNING device_uuid;`
 
 	authenticateMDM = `INSERT INTO devices (
@@ -62,12 +64,21 @@ var (
     imei=$7,
     meid=$8
 	RETURNING device_uuid;`
+
+	selectDevicesStmt = `SELECT device_uuid, 
+	udid,
+	serial_number, 
+	dep_profile_status,
+	model,
+	workflow_uuid
+	FROM devices`
 )
 
 // Datastore manages devices in a database
 type Datastore interface {
 	New(src string, d *Device) (string, error)
 	GetDeviceByUDID(udid string, fields ...string) (*Device, error)
+	Devices(params ...interface{}) ([]Device, error)
 }
 
 type pgStore struct {
@@ -97,6 +108,7 @@ func (store pgStore) New(src string, d *Device) (string, error) {
 			d.DEPProfilePushTime,
 			d.DEPProfileAssignedDate,
 			d.DEPProfileAssignedBy,
+			true,
 		).Scan(&d.UUID)
 		if err != nil {
 			return "", err
@@ -121,6 +133,38 @@ func (store pgStore) New(src string, d *Device) (string, error) {
 	default:
 		return "", fmt.Errorf("datastore command not supported %q", src)
 	}
+}
+
+func (store pgStore) Devices(params ...interface{}) ([]Device, error) {
+	stmt := selectDevicesStmt
+	stmt = addWhereFilters(stmt, params...)
+	var devices []Device
+	err := store.Select(&devices, stmt)
+	if err != nil {
+		return nil, errors.Wrap(err, "pgStore Devices")
+	}
+	return devices, nil
+}
+
+// whereer is for building args passed into a method which finds resources
+type whereer interface {
+	where() string
+}
+
+// add WHERE clause from params
+func addWhereFilters(stmt string, params ...interface{}) string {
+	var where []string
+	for _, param := range params {
+		if f, ok := param.(whereer); ok {
+			where = append(where, f.where())
+		}
+	}
+
+	if len(where) != 0 {
+		whereFilter := strings.Join(where, ",")
+		stmt = fmt.Sprintf("%s WHERE %s", stmt, whereFilter)
+	}
+	return stmt
 }
 
 //NewDB creates a Datastore
@@ -157,7 +201,7 @@ func migrate(db *sqlx.DB) {
 	CREATE TABLE IF NOT EXISTS devices (
 	  device_uuid uuid PRIMARY KEY 
 	            DEFAULT uuid_generate_v4(), 
-	  udid text,
+	  udid text NOT NULL DEFAULT '',
 	  serial_number text,
 	  os_version text,
 	  model text,
@@ -178,6 +222,8 @@ func migrate(db *sqlx.DB) {
 	  apple_mdm_topic text,
 	  apple_push_magic text,
 	  mdm_enrolled boolean,
+	  workflow_uuid text NOT NULL DEFAULT '',
+	  dep_device boolean,
 	  awaiting_configuration boolean
 	  );
 	  CREATE UNIQUE INDEX serial_idx ON devices (serial_number);`

@@ -18,10 +18,19 @@ func TestNewDB(t *testing.T) {
 	}
 }
 
-func TestInsertFetch(t *testing.T) {
+func TestRetrieveDevices(t *testing.T) {
 	ds := datastore(t)
 	defer teardown()
+	addTestDevices(t, ds)
 
+	_, err := ds.Devices()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func addTestDevices(t *testing.T, ds Datastore) {
+	now := time.Now()
 	var devicetests = []struct {
 		in Device
 	}{
@@ -56,7 +65,62 @@ func TestInsertFetch(t *testing.T) {
 				Description:          "It's a tablet",
 				Color:                "pink",
 				AssetTag:             "foo",
-				DEPProfileAssignTime: time.Now(),
+				DEPProfileAssignTime: &now,
+			},
+		},
+	}
+
+	for _, tt := range devicetests {
+		uuid, err := ds.New("fetch", &tt.in)
+		if err != nil {
+			t.Log("failed at", tt.in.SerialNumber)
+			t.Fatal(err)
+		}
+		if len(uuid) != 36 {
+			t.Errorf("newdevice fetch: expected uuid got %q", uuid)
+		}
+	}
+}
+func TestInsertFetch(t *testing.T) {
+	ds := datastore(t)
+	defer teardown()
+
+	now := time.Now()
+	var devicetests = []struct {
+		in Device
+	}{
+		{
+			Device{
+				SerialNumber: "DEADBEEF123A",
+				Model:        "Macbook",
+				Description:  "It's a laptop",
+				Color:        "red",
+			},
+		},
+		{
+			Device{
+				SerialNumber: "DEADBEEF123A",
+				Model:        "Macbook",
+				Description:  "It's a laptop",
+				Color:        "red",
+			},
+		},
+		{
+			Device{
+				SerialNumber: "DEADBEEF123B",
+				Model:        "Macbook",
+				Description:  "It's a laptop",
+				Color:        "blue",
+			},
+		},
+		{
+			Device{
+				SerialNumber:         "DEADBEEF123C",
+				Model:                "iPad",
+				Description:          "It's a tablet",
+				Color:                "pink",
+				AssetTag:             "foo",
+				DEPProfileAssignTime: &now,
 			},
 		},
 	}
@@ -77,6 +141,7 @@ func TestInsertAuthenticate(t *testing.T) {
 	ds := datastore(t)
 	defer teardown()
 
+	var now = time.Now()
 	var devicetests = []struct {
 		in Device
 	}{
@@ -129,7 +194,7 @@ func TestInsertAuthenticate(t *testing.T) {
 				Description:          "It's a tablet",
 				Color:                "pink",
 				AssetTag:             "foo",
-				DEPProfileAssignTime: time.Now(),
+				DEPProfileAssignTime: &now,
 			},
 		},
 	}
@@ -149,6 +214,7 @@ func TestInsertAuthenticate(t *testing.T) {
 func TestGetDeviceByUDID(t *testing.T) {
 	ds := datastore(t)
 	defer teardown()
+	var now = time.Now()
 	var devicetests = []struct {
 		in Device
 	}{
@@ -205,7 +271,7 @@ func TestGetDeviceByUDID(t *testing.T) {
 				Description:          "It's a tablet",
 				Color:                "pink",
 				AssetTag:             "foo",
-				DEPProfileAssignTime: time.Now(),
+				DEPProfileAssignTime: &now,
 			},
 		},
 	}

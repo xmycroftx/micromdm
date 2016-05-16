@@ -17,6 +17,110 @@ import (
 	"golang.org/x/net/context"
 )
 
+func TestAddWorkflowWithProfiles(t *testing.T) {
+	server, svc := newServer(t)
+	defer teardown()
+	defer server.Close()
+
+	profileData := []byte(`{
+    "payload_identifier": "com.micromdm.example2",
+    "data" : "fooProfile"
+	}`)
+
+	pfBody := testAddHTTP("profiles", t, svc, server, profileData, http.StatusCreated)
+	var pf workflow.Profile
+	err := json.NewDecoder(pfBody).Decode(&pf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wf := workflow.Workflow{
+		Name:     "test_workflow",
+		Profiles: []workflow.Profile{pf},
+	}
+	wfData, err := json.Marshal(wf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wfBody := testAddHTTP("workflows", t, svc, server, wfData, http.StatusCreated)
+
+	var returned workflow.Workflow
+	err = json.NewDecoder(wfBody).Decode(&returned)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !returned.HasProfile(pf.PayloadIdentifier) {
+		t.Fatal("returned workflow must have profile")
+	}
+}
+
+// create some workflows to be used by tests
+func addWorkflows(t *testing.T, server *httptest.Server, svc Service) []workflow.Workflow {
+	profileData := []byte(`{
+    "payload_identifier": "com.micromdm.example2",
+    "data" : "fooProfile"
+	}`)
+
+	pfBody := testAddHTTP("profiles", t, svc, server, profileData, http.StatusCreated)
+	var pf workflow.Profile
+	err := json.NewDecoder(pfBody).Decode(&pf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wf := workflow.Workflow{
+		Name:     "test_workflow",
+		Profiles: []workflow.Profile{pf},
+	}
+	wfData, err := json.Marshal(wf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wfBody := testAddHTTP("workflows", t, svc, server, wfData, http.StatusCreated)
+
+	var returned workflow.Workflow
+	err = json.NewDecoder(wfBody).Decode(&returned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return []workflow.Workflow{returned}
+}
+
+func TestAddWorkflow(t *testing.T) {
+	server, svc := newServer(t)
+	defer teardown()
+	defer server.Close()
+
+	workflowData := []byte(`{
+    "name": "testWorkflow"
+	}`)
+
+	var addTests = []struct {
+		in       []byte
+		expected int
+	}{
+		{
+			in:       nil,
+			expected: http.StatusBadRequest,
+		},
+		{
+			in:       workflowData,
+			expected: http.StatusCreated,
+		},
+		{
+			in:       workflowData,
+			expected: http.StatusConflict,
+		},
+	}
+
+	for _, tt := range addTests {
+		testAddHTTP("workflows", t, svc, server, tt.in, tt.expected)
+	}
+}
+
 func TestDeleteProfile(t *testing.T) {
 	server, svc := newServer(t)
 	defer teardown()
@@ -29,7 +133,7 @@ func TestDeleteProfile(t *testing.T) {
     "data" : "fooProfile"
 	}`)
 
-	testAddHTTP(t, svc, server, profileData, http.StatusCreated)
+	testAddHTTP("profiles", t, svc, server, profileData, http.StatusCreated)
 	profiles := testListHTTP(t, svc, server, http.StatusOK)
 	for _, p := range profiles {
 		testDeleteHTTP(t, svc, server, p.UUID, http.StatusNoContent)
@@ -49,7 +153,7 @@ func TestShowProfile(t *testing.T) {
 	testGetHTTP(t, svc, server, "foo", http.StatusBadRequest)
 	testGetHTTP(t, svc, server, "036d339c-4fe4-4d6e-a051-65fafbec8c93", http.StatusNotFound)
 
-	testAddHTTP(t, svc, server, profileData, http.StatusCreated)
+	testAddHTTP("profiles", t, svc, server, profileData, http.StatusCreated)
 	profiles := testListHTTP(t, svc, server, http.StatusOK)
 	for _, p := range profiles {
 		returned := testGetHTTP(t, svc, server, p.UUID, http.StatusOK)
@@ -98,6 +202,14 @@ func testGetHTTP(t *testing.T, svc Service, server *httptest.Server, uuid string
 	return &profile
 }
 
+func TestListWorkflows(t *testing.T) {
+	server, svc := newServer(t)
+	defer teardown()
+	defer server.Close()
+	addWorkflows(t, server, svc)
+	testListWorkflowsHTTP(t, svc, server, http.StatusOK)
+}
+
 func TestListProfiles(t *testing.T) {
 	server, svc := newServer(t)
 	defer teardown()
@@ -108,7 +220,7 @@ func TestListProfiles(t *testing.T) {
     "data" : "fooProfile"
 	}`)
 
-	testAddHTTP(t, svc, server, profileData, http.StatusCreated)
+	testAddHTTP("profiles", t, svc, server, profileData, http.StatusCreated)
 	testListHTTP(t, svc, server, http.StatusOK)
 
 }
@@ -142,7 +254,7 @@ func TestAddProfile(t *testing.T) {
 	}
 
 	for _, tt := range addTests {
-		testAddHTTP(t, svc, server, tt.in, tt.expected)
+		testAddHTTP("profiles", t, svc, server, tt.in, tt.expected)
 	}
 }
 
@@ -156,6 +268,7 @@ func newServer(t *testing.T) (*httptest.Server, Service) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	ps, err := workflow.NewDB("postgres", testConn, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -165,6 +278,28 @@ func newServer(t *testing.T) (*httptest.Server, Service) {
 	handler := ServiceHandler(ctx, svc, logger)
 	server := httptest.NewServer(handler)
 	return server, svc
+}
+
+func testListWorkflowsHTTP(t *testing.T, svc Service, server *httptest.Server, expectedStatus int) []workflow.Workflow {
+	client := http.DefaultClient
+	theURL := server.URL + "/management/v1/workflows"
+	resp, err := client.Get(theURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != expectedStatus {
+		io.Copy(os.Stdout, resp.Body)
+		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
+	}
+
+	// test decoding the result into a struct
+	var workflows []workflow.Workflow
+	if err := json.NewDecoder(resp.Body).Decode(&workflows); err != nil {
+		t.Log("failed to decode profiles from list response")
+		t.Fatal(err)
+	}
+	return workflows
 }
 
 func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedStatus int) []workflow.Profile {
@@ -189,11 +324,11 @@ func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedSt
 	return profiles
 }
 
-func testAddHTTP(t *testing.T, svc Service, server *httptest.Server, profile []byte, expectedStatus int) {
-	body := &nopCloser{bytes.NewBuffer(profile)}
+func testAddHTTP(endpoint string, t *testing.T, svc Service, server *httptest.Server, data []byte, expectedStatus int) io.Reader {
+	body := &nopCloser{bytes.NewBuffer(data)}
 
 	client := http.DefaultClient
-	theURL := server.URL + "/management/v1/profiles"
+	theURL := server.URL + "/management/v1/" + endpoint
 	resp, err := client.Post(theURL, "application/json", body)
 	if err != nil {
 		t.Fatal(err)
@@ -203,6 +338,8 @@ func testAddHTTP(t *testing.T, svc Service, server *httptest.Server, profile []b
 		io.Copy(os.Stdout, resp.Body)
 		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
 	}
+
+	return resp.Body
 }
 
 func TestFetchDEPDevices(t *testing.T) {

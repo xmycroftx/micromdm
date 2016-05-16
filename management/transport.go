@@ -59,13 +59,33 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		opts...,
 	)
 
+	addWorkflowHandler := kithttp.NewServer(
+		ctx,
+		makeAddWorkflowEndpoint(svc),
+		decodeAddWorkflowRequest,
+		encodeResponse,
+		opts...,
+	)
+	listWorkflowsHandler := kithttp.NewServer(
+		ctx,
+		makeListWorkflowsEndpoint(svc),
+		decodeListWorkflowsRequest,
+		encodeResponse,
+		opts...,
+	)
+
 	r := mux.NewRouter()
 
+	// dep
 	r.Handle("/management/v1/devices/fetch", fetchDEPHandler).Methods("POST")
+	// profiles
 	r.Handle("/management/v1/profiles", addProfileHandler).Methods("POST")
 	r.Handle("/management/v1/profiles", listProfilesHandler).Methods("GET")
 	r.Handle("/management/v1/profiles/{uuid}", showProfileHandler).Methods("GET")
 	r.Handle("/management/v1/profiles/{uuid}", deleteProfileHandler).Methods("DELETE")
+	// workflows
+	r.Handle("/management/v1/workflows", addWorkflowHandler).Methods("POST")
+	r.Handle("/management/v1/workflows", listWorkflowsHandler).Methods("GET")
 
 	return r
 }
@@ -114,6 +134,23 @@ func decodeDeleteProfileRequest(_ context.Context, r *http.Request) (interface{}
 		return nil, errBadUUID
 	}
 	return deleteProfileRequest{UUID: uuid}, nil
+}
+
+// workflow
+func decodeAddWorkflowRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var request addWorkflowRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err == io.EOF {
+		return nil, errEmptyRequest
+	}
+	if request.Name == "" {
+		return nil, errEmptyRequest
+	}
+	return request, err
+}
+
+func decodeListWorkflowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return listWorkflowsRequest{}, nil
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

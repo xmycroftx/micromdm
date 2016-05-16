@@ -12,10 +12,15 @@ var ErrNotFound = errors.New("not found")
 
 // Service is the interface that provides methods for managing devices
 type Service interface {
+	// profiles
 	AddProfile(prf *workflow.Profile) (*workflow.Profile, error)
 	Profiles() ([]workflow.Profile, error)
 	Profile(uuid string) (*workflow.Profile, error)
 	DeleteProfile(uuid string) error
+	// workflows
+	AddWorkflow(wf *workflow.Workflow) (*workflow.Workflow, error)
+	Workflows() ([]workflow.Workflow, error)
+	// dep
 	FetchDEPDevices() error
 }
 
@@ -71,6 +76,15 @@ func (svc service) FetchDEPDevices() error {
 		}
 	}
 	return nil
+}
+
+// workflows svc
+func (svc service) AddWorkflow(wf *workflow.Workflow) (*workflow.Workflow, error) {
+	return svc.workflows.CreateWorkflow(wf)
+}
+
+func (svc service) Workflows() ([]workflow.Workflow, error) {
+	return svc.workflows.Workflows()
 }
 
 // NewService creates a management service

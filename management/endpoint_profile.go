@@ -12,7 +12,7 @@ import (
 
 var (
 	// ErrEmptyRequest is returned if the request body is empty
-	errEmptyRequest = errors.New("request must contain a profile identifier")
+	errEmptyRequest = errors.New("request must contain all required fields")
 	errBadRouting   = errors.New("inconsistent mapping between route and handler (programmer error)")
 )
 
