@@ -74,10 +74,20 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		opts...,
 	)
 
+	listDevicesHandler := kithttp.NewServer(
+		ctx,
+		makeListDevicesEndpoint(svc),
+		decodeListDevicesRequest,
+		encodeResponse,
+		opts...,
+	)
+
 	r := mux.NewRouter()
 
 	// dep
 	r.Handle("/management/v1/devices/fetch", fetchDEPHandler).Methods("POST")
+	//devices
+	r.Handle("/management/v1/devices", listDevicesHandler).Methods("GET")
 	// profiles
 	r.Handle("/management/v1/profiles", addProfileHandler).Methods("POST")
 	r.Handle("/management/v1/profiles", listProfilesHandler).Methods("GET")
@@ -151,6 +161,11 @@ func decodeAddWorkflowRequest(_ context.Context, r *http.Request) (interface{}, 
 
 func decodeListWorkflowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return listWorkflowsRequest{}, nil
+}
+
+// devices
+func decodeListDevicesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return listDevicesRequest{}, nil
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

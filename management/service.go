@@ -20,6 +20,9 @@ type Service interface {
 	// workflows
 	AddWorkflow(wf *workflow.Workflow) (*workflow.Workflow, error)
 	Workflows() ([]workflow.Workflow, error)
+
+	// Devices
+	Devices() ([]device.Device, error)
 	// dep
 	FetchDEPDevices() error
 }
@@ -85,6 +88,11 @@ func (svc service) AddWorkflow(wf *workflow.Workflow) (*workflow.Workflow, error
 
 func (svc service) Workflows() ([]workflow.Workflow, error) {
 	return svc.workflows.Workflows()
+}
+
+// devices
+func (svc service) Devices() ([]device.Device, error) {
+	return svc.devices.Devices()
 }
 
 // NewService creates a management service

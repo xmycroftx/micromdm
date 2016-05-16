@@ -16,21 +16,6 @@ var (
 	errBadRouting   = errors.New("inconsistent mapping between route and handler (programmer error)")
 )
 
-type fetchDEPDevicesRequest struct{}
-
-type fetchDEPDevicesResponse struct {
-	Err error `json:"error,omitempty"`
-}
-
-func (r fetchDEPDevicesResponse) error() error { return r.Err }
-
-func makeFetchDevicesEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		err := svc.FetchDEPDevices()
-		return fetchDEPDevicesResponse{Err: err}, nil
-	}
-}
-
 type addProfileRequest struct {
 	*workflow.Profile
 }
