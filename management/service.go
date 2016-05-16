@@ -3,7 +3,7 @@ package management
 import (
 	"github.com/micromdm/dep"
 	"github.com/micromdm/micromdm/device"
-	"github.com/micromdm/micromdm/profile"
+	"github.com/micromdm/micromdm/workflow"
 	"github.com/pkg/errors"
 )
 
@@ -12,30 +12,30 @@ var ErrNotFound = errors.New("not found")
 
 // Service is the interface that provides methods for managing devices
 type Service interface {
-	AddProfile(prf *profile.Profile) (*profile.Profile, error)
-	Profiles() ([]profile.Profile, error)
-
-	Profile(identifier string) (*profile.Profile, error)
+	AddProfile(prf *workflow.Profile) (*workflow.Profile, error)
+	Profiles() ([]workflow.Profile, error)
+	Profile(uuid string) (*workflow.Profile, error)
+	DeleteProfile(uuid string) error
 	FetchDEPDevices() error
 }
 
 type service struct {
 	depClient dep.Client
 	devices   device.Datastore
-	profiles  profile.Datastore
+	workflows workflow.Datastore
 }
 
-func (svc service) AddProfile(prf *profile.Profile) (*profile.Profile, error) {
-	return svc.profiles.Add(prf)
+func (svc service) AddProfile(prf *workflow.Profile) (*workflow.Profile, error) {
+	return svc.workflows.CreateProfile(prf)
 }
 
-func (svc service) Profiles() ([]profile.Profile, error) {
-	return svc.profiles.Profiles()
+func (svc service) Profiles() ([]workflow.Profile, error) {
+	return svc.workflows.Profiles()
 }
 
 // Profile returns a single profile given an UUID
-func (svc service) Profile(identifier string) (*profile.Profile, error) {
-	profiles, err := svc.profiles.Profiles(profile.UUID{identifier})
+func (svc service) Profile(uuid string) (*workflow.Profile, error) {
+	profiles, err := svc.workflows.Profiles(workflow.ProfileUUID{uuid})
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +44,18 @@ func (svc service) Profile(identifier string) (*profile.Profile, error) {
 	}
 	pf := profiles[0]
 	return &pf, nil
+}
+
+func (svc service) DeleteProfile(uuid string) error {
+	pr, err := svc.Profile(uuid) // get profile from datastore
+	if err != nil {
+		return err
+	}
+	err = svc.workflows.DeleteProfile(pr)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (svc service) FetchDEPDevices() error {
@@ -62,10 +74,10 @@ func (svc service) FetchDEPDevices() error {
 }
 
 // NewService creates a management service
-func NewService(ds device.Datastore, ps profile.Datastore, dc dep.Client) Service {
+func NewService(ds device.Datastore, ws workflow.Datastore, dc dep.Client) Service {
 	return &service{
 		devices:   ds,
 		depClient: dc,
-		profiles:  ps,
+		workflows: ws,
 	}
 }

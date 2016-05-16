@@ -9,7 +9,7 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"github.com/micromdm/micromdm/profile"
+	"github.com/micromdm/micromdm/workflow"
 	"golang.org/x/net/context"
 )
 
@@ -51,6 +51,13 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		encodeResponse,
 		opts...,
 	)
+	deleteProfileHandler := kithttp.NewServer(
+		ctx,
+		makeDeleteProfileEndpoint(svc),
+		decodeDeleteProfileRequest,
+		encodeResponse,
+		opts...,
+	)
 
 	r := mux.NewRouter()
 
@@ -58,6 +65,7 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 	r.Handle("/management/v1/profiles", addProfileHandler).Methods("POST")
 	r.Handle("/management/v1/profiles", listProfilesHandler).Methods("GET")
 	r.Handle("/management/v1/profiles/{uuid}", showProfileHandler).Methods("GET")
+	r.Handle("/management/v1/profiles/{uuid}", deleteProfileHandler).Methods("DELETE")
 
 	return r
 }
@@ -95,6 +103,19 @@ func decodeShowProfileRequest(_ context.Context, r *http.Request) (interface{}, 
 	return showProfileRequest{UUID: uuid}, nil
 }
 
+func decodeDeleteProfileRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	uuid, ok := vars["uuid"]
+	if !ok {
+		return nil, errBadRouting
+	}
+	// simple validation
+	if len(uuid) != 36 {
+		return nil, errBadUUID
+	}
+	return deleteProfileRequest{UUID: uuid}, nil
+}
+
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if e, ok := response.(errorer); ok && e.error() != nil {
 		encodeError(ctx, e.error(), w)
@@ -104,6 +125,9 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 	// for success responses
 	if e, ok := response.(statuser); ok {
 		w.WriteHeader(e.status())
+		if e.status() == http.StatusNoContent {
+			return nil
+		}
 	}
 
 	// check if this is a collection
@@ -137,7 +161,7 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 		w.WriteHeader(http.StatusNotFound)
 	case errEmptyRequest, errBadUUID:
 		w.WriteHeader(http.StatusBadRequest)
-	case profile.ErrExists:
+	case workflow.ErrExists:
 		w.WriteHeader(http.StatusConflict)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)

@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/micromdm/micromdm/profile"
+	"github.com/micromdm/micromdm/workflow"
 	"golang.org/x/net/context"
 )
 
@@ -32,15 +32,15 @@ func makeFetchDevicesEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type addProfileRequest struct {
-	*profile.Profile
+	*workflow.Profile
 }
 
 type addProfileResponse struct {
-	*profile.Profile
+	*workflow.Profile
 	Err error `json:"error,omitempty"`
 }
 
-func (r addProfileResponse) status() int { return 201 }
+func (r addProfileResponse) status() int { return http.StatusCreated }
 
 func (r addProfileResponse) error() error { return r.Err }
 
@@ -55,7 +55,7 @@ func makeAddProfileEndpoint(svc Service) endpoint.Endpoint {
 type listProfilesRequest struct{}
 
 type listProfilesResponse struct {
-	profiles []profile.Profile
+	profiles []workflow.Profile
 	Err      error `json:"error,omitempty"`
 }
 
@@ -83,7 +83,7 @@ type showProfileRequest struct {
 }
 
 type showProfileResponse struct {
-	*profile.Profile
+	*workflow.Profile
 	Err error `json:"error,omitempty"`
 }
 
@@ -97,5 +97,27 @@ func makeShowProfileEndpoint(svc Service) endpoint.Endpoint {
 			return showProfileResponse{Err: err}, nil
 		}
 		return showProfileResponse{Profile: pf}, nil
+	}
+}
+
+type deleteProfileRequest struct {
+	UUID string
+}
+
+type deleteProfileResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r deleteProfileResponse) status() int  { return http.StatusNoContent }
+func (r deleteProfileResponse) error() error { return r.Err }
+
+func makeDeleteProfileEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(deleteProfileRequest)
+		err := svc.DeleteProfile(req.UUID)
+		if err != nil {
+			return deleteProfileResponse{Err: err}, nil
+		}
+		return deleteProfileResponse{}, nil
 	}
 }

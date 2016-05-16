@@ -13,9 +13,28 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/micromdm/dep"
 	"github.com/micromdm/micromdm/device"
-	"github.com/micromdm/micromdm/profile"
+	"github.com/micromdm/micromdm/workflow"
 	"golang.org/x/net/context"
 )
+
+func TestDeleteProfile(t *testing.T) {
+	server, svc := newServer(t)
+	defer teardown()
+	defer server.Close()
+	testDeleteHTTP(t, svc, server, "foo", http.StatusBadRequest)
+	testDeleteHTTP(t, svc, server, "65fd8c1d-20bc-4342-9bb6-258120d6b124", http.StatusNotFound)
+
+	profileData := []byte(`{
+    "payload_identifier": "com.micromdm.example2",
+    "data" : "fooProfile"
+	}`)
+
+	testAddHTTP(t, svc, server, profileData, http.StatusCreated)
+	profiles := testListHTTP(t, svc, server, http.StatusOK)
+	for _, p := range profiles {
+		testDeleteHTTP(t, svc, server, p.UUID, http.StatusNoContent)
+	}
+}
 
 func TestShowProfile(t *testing.T) {
 	server, svc := newServer(t)
@@ -42,7 +61,22 @@ func TestShowProfile(t *testing.T) {
 
 }
 
-func testGetHTTP(t *testing.T, svc Service, server *httptest.Server, uuid string, expectedStatus int) *profile.Profile {
+func testDeleteHTTP(t *testing.T, svc Service, server *httptest.Server, uuid string, expectedStatus int) {
+	client := http.DefaultClient
+	theURL := server.URL + "/management/v1/profiles" + "/" + uuid
+	req, err := http.NewRequest("DELETE", theURL, nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != expectedStatus {
+		io.Copy(os.Stdout, resp.Body)
+		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
+	}
+}
+
+func testGetHTTP(t *testing.T, svc Service, server *httptest.Server, uuid string, expectedStatus int) *workflow.Profile {
 	client := http.DefaultClient
 	theURL := server.URL + "/management/v1/profiles" + "/" + uuid
 	resp, err := client.Get(theURL)
@@ -56,7 +90,7 @@ func testGetHTTP(t *testing.T, svc Service, server *httptest.Server, uuid string
 	}
 
 	// test decoding the result into a struct
-	var profile profile.Profile
+	var profile workflow.Profile
 	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
 		t.Log("failed to decode profiles from GET response")
 		t.Fatal(err)
@@ -122,7 +156,7 @@ func newServer(t *testing.T) (*httptest.Server, Service) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ps, err := profile.NewDB("postgres", testConn, logger)
+	ps, err := workflow.NewDB("postgres", testConn, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +167,7 @@ func newServer(t *testing.T) (*httptest.Server, Service) {
 	return server, svc
 }
 
-func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedStatus int) []profile.Profile {
+func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedStatus int) []workflow.Profile {
 	client := http.DefaultClient
 	theURL := server.URL + "/management/v1/profiles"
 	resp, err := client.Get(theURL)
@@ -147,7 +181,7 @@ func testListHTTP(t *testing.T, svc Service, server *httptest.Server, expectedSt
 	}
 
 	// test decoding the result into a struct
-	var profiles []profile.Profile
+	var profiles []workflow.Profile
 	if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
 		t.Log("failed to decode profiles from list response")
 		t.Fatal(err)
@@ -228,6 +262,9 @@ func teardown() {
 	DROP TABLE IF EXISTS devices;
 	DROP INDEX IF EXISTS devices.serial_idx;
 	DROP INDEX IF EXISTS devices.udid_idx;
+	DROP TABLE IF EXISTS workflow_profile;
+	DROP TABLE IF EXISTS workflow_workflow;
+	DROP TABLE IF EXISTS workflows;
 	DROP TABLE IF EXISTS profiles;
 	`
 	db.MustExec(drop)
