@@ -1,11 +1,27 @@
 package checkin
 
 import (
+	"errors"
+
 	"github.com/go-kit/kit/endpoint"
+	"github.com/micromdm/mdm"
 	"golang.org/x/net/context"
 )
 
-func makeCheckinEndpoint(svc MDMCheckinService) endpoint.Endpoint {
+// ErrInvalidMessageType is an invalid checking command
+var errInvalidMessageType = errors.New("invalid message type")
+
+type mdmCheckinRequest struct {
+	mdm.CheckinCommand
+}
+
+type mdmCheckinResponse struct {
+	Err error `plist:"error,omitempty"`
+}
+
+func (r mdmCheckinResponse) error() error { return r.Err }
+
+func makeCheckinEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(mdmCheckinRequest)
 		var err error
@@ -17,7 +33,7 @@ func makeCheckinEndpoint(svc MDMCheckinService) endpoint.Endpoint {
 		case "CheckOut":
 			err = svc.Checkout(req.CheckinCommand)
 		default:
-			return mdmCheckinResponse{ErrInvalidMessageType}, nil
+			return mdmCheckinResponse{errInvalidMessageType}, nil
 		}
 		if err != nil {
 			return mdmCheckinResponse{err}, nil
@@ -26,13 +42,13 @@ func makeCheckinEndpoint(svc MDMCheckinService) endpoint.Endpoint {
 	}
 }
 
-func makeEnrollmentEndpoint(svc MDMCheckinService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(depEnrollmentRequest)
-		profile, err := svc.Enroll(req.DEPEnrollmentRequest.UDID)
-		if err != nil {
-			return depEnrollmentResponse{Err: err}, nil
-		}
-		return depEnrollmentResponse{Profile: []byte(*profile)}, nil
-	}
+type depEnrollmentRequest struct {
+	mdm.DEPEnrollmentRequest
 }
+
+type depEnrollmentResponse struct {
+	Profile []byte // MDM Enrollment Profile
+	Err     error  `plist:"error,omitempty"`
+}
+
+func (r depEnrollmentResponse) error() error { return r.Err }
