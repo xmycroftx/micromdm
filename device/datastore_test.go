@@ -21,15 +21,24 @@ func TestNewDB(t *testing.T) {
 func TestRetrieveDevices(t *testing.T) {
 	ds := datastore(t)
 	defer teardown()
-	addTestDevices(t, ds)
+	devices := addTestDevices(t, ds)
 
 	_, err := ds.Devices()
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev0 := devices[0]
+	returned, err := ds.Devices(UUID{dev0.UUID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if returned[0].SerialNumber != dev0.SerialNumber {
+		t.Fatal("expected", dev0.SerialNumber, "got", returned[0].SerialNumber)
+	}
 }
 
-func addTestDevices(t *testing.T, ds Datastore) {
+func addTestDevices(t *testing.T, ds Datastore) []Device {
 	now := time.Now()
 	var devicetests = []struct {
 		in Device
@@ -70,6 +79,8 @@ func addTestDevices(t *testing.T, ds Datastore) {
 		},
 	}
 
+	var devices []Device
+
 	for _, tt := range devicetests {
 		uuid, err := ds.New("fetch", &tt.in)
 		if err != nil {
@@ -79,7 +90,12 @@ func addTestDevices(t *testing.T, ds Datastore) {
 		if len(uuid) != 36 {
 			t.Errorf("newdevice fetch: expected uuid got %q", uuid)
 		}
+
+		d := tt.in
+		d.UUID = uuid
+		devices = append(devices, d)
 	}
+	return devices
 }
 func TestInsertFetch(t *testing.T) {
 	ds := datastore(t)

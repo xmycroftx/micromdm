@@ -81,6 +81,15 @@ type Datastore interface {
 	Devices(params ...interface{}) ([]Device, error)
 }
 
+// UUID is a filter that can be added as a parameter to narrow down the list of returned results
+type UUID struct {
+	UUID string
+}
+
+func (p UUID) where() string {
+	return fmt.Sprintf("device_uuid = '%s'", p.UUID)
+}
+
 type pgStore struct {
 	*sqlx.DB
 }
