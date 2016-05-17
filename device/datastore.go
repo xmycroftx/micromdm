@@ -78,6 +78,7 @@ var (
 type Datastore interface {
 	New(src string, d *Device) (string, error)
 	GetDeviceByUDID(udid string, fields ...string) (*Device, error)
+	GetDeviceByUUID(uuid string, fields ...string) (*Device, error)
 	Devices(params ...interface{}) ([]Device, error)
 	Save(msg string, dev *Device) error
 }
@@ -102,11 +103,11 @@ func (store pgStore) GetDeviceByUDID(udid string, fields ...string) (*Device, er
 	return &device, sqlx.Get(store, &device, query, udid)
 }
 
-func (store pgStore) GetDeviceByUUID(udid string, fields ...string) (*Device, error) {
+func (store pgStore) GetDeviceByUUID(uuid string, fields ...string) (*Device, error) {
 	var device Device
 	s := strings.Join(fields, ", ")
 	query := `SELECT ` + s + ` FROM devices WHERE udid=$1 LIMIT 1`
-	return &device, sqlx.Get(store, &device, query, udid)
+	return &device, sqlx.Get(store, &device, query, uuid)
 }
 
 func (store pgStore) New(src string, d *Device) (string, error) {
@@ -247,7 +248,7 @@ func migrate(db *sqlx.DB) {
 	  udid text NOT NULL DEFAULT '',
 	  serial_number text,
 	  os_version text,
-	  model text,
+	  model text NOT NULL DEFAULT '',
 	  color text,
 	  asset_tag text,
 	  dep_profile_status text,
@@ -256,11 +257,11 @@ func migrate(db *sqlx.DB) {
 	  dep_profile_push_time date,
 	  dep_profile_assigned_date date,
 	  dep_profile_assigned_by text,
-	  description text,
+	  description text NOT NULL DEFAULT '',
 	  build_version text,
 	  product_name text,
-	  imei text,
-	  meid text,
+	  imei text NOT NULL DEFAULT '',
+	  meid text NOT NULL DEFAULT '',
 	  apple_mdm_token text,
 	  apple_mdm_topic text,
 	  apple_push_magic text,

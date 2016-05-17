@@ -1,6 +1,9 @@
 package connect
 
 import (
+	"bytes"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -32,8 +35,11 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 }
 
 func decodeMDMConnectRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	body, _ := ioutil.ReadAll(r.Body)
+	fmt.Println(string(body))
+	reader := bytes.NewReader(body)
 	var request mdmConnectRequest
-	if err := plist.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := plist.NewDecoder(reader).Decode(&request); err != nil {
 		return nil, err
 	}
 	return request, nil

@@ -1,6 +1,8 @@
 package management
 
 import (
+	"github.com/RobotsAndPencils/buford/payload"
+	"github.com/RobotsAndPencils/buford/push"
 	"github.com/micromdm/dep"
 	"github.com/micromdm/micromdm/device"
 	"github.com/micromdm/micromdm/workflow"
@@ -26,12 +28,44 @@ type Service interface {
 	Device(uuid string) (*device.Device, error)
 	// dep
 	FetchDEPDevices() error
+	// push
+	Push(deviceUDID string) (string, error)
+}
+
+// NewService creates a management service
+func NewService(ds device.Datastore, ws workflow.Datastore, dc dep.Client, ps *push.Service) Service {
+	return &service{
+		devices:   ds,
+		depClient: dc,
+		workflows: ws,
+		pushsvc:   ps,
+	}
 }
 
 type service struct {
 	depClient dep.Client
 	devices   device.Datastore
 	workflows workflow.Datastore
+	pushsvc   *push.Service
+}
+
+func (svc service) Push(deviceUDID string) (string, error) {
+	dev, err := svc.devices.GetDeviceByUDID(deviceUDID,
+		[]string{"device_uuid",
+			"apple_push_magic",
+			"apple_mdm_token",
+		}...,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	p := payload.MDM{Token: dev.PushMagic}
+	valid := push.IsDeviceTokenValid(dev.Token)
+	if !valid {
+		return "", errors.New("invalid push token")
+	}
+	return svc.pushsvc.Push(dev.Token, nil, p)
 }
 
 func (svc service) AddProfile(prf *workflow.Profile) (*workflow.Profile, error) {
@@ -106,13 +140,4 @@ func (svc service) Device(uuid string) (*device.Device, error) {
 	}
 	dev := devices[0]
 	return &dev, nil
-}
-
-// NewService creates a management service
-func NewService(ds device.Datastore, ws workflow.Datastore, dc dep.Client) Service {
-	return &service{
-		devices:   ds,
-		depClient: dc,
-		workflows: ws,
-	}
 }

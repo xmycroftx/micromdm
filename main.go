@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/RobotsAndPencils/buford/certificate"
+	"github.com/RobotsAndPencils/buford/push"
 	"github.com/go-kit/kit/log"
 	"github.com/micromdm/dep"
 	"github.com/micromdm/micromdm/checkin"
@@ -95,6 +97,16 @@ func main() {
 		logger.Log("err", "database connection url not specified")
 		os.Exit(1)
 	}
+	if checkEmptyArgs(*flPushCert, *flPushPass) {
+		logger.Log("err", "must specify push cert path and password")
+		os.Exit(1)
+	}
+
+	pushSvc, err := pushService(*flPushCert, *flPushPass)
+	if err != nil {
+		logger.Log("err", err)
+		os.Exit(1)
+	}
 
 	workflowDB, err := workflow.NewDB(
 		"postgres",
@@ -134,7 +146,7 @@ func main() {
 	}
 
 	dc := depClient(logger, *flDEPCK, *flDEPCS, *flDEPAT, *flDEPAS, *flDEPServerURL, *flDEPsim)
-	mgmtSvc := management.NewService(deviceDB, workflowDB, dc)
+	mgmtSvc := management.NewService(deviceDB, workflowDB, dc, pushSvc)
 	commandSvc := command.NewService(commandDB)
 	checkinSvc := checkin.NewService(deviceDB, mgmtSvc)
 	connectSvc := connect.NewService(deviceDB, commandSvc)
@@ -194,7 +206,25 @@ func depClient(logger log.Logger, consumerKey, consumerSecret, accessToken, acce
 		os.Exit(1)
 
 	}
+
 	return client
+}
+
+func pushService(certPath, password string) (*push.Service, error) {
+	cert, key, err := certificate.Load(certPath, password)
+	if err != nil {
+		return nil, err
+	}
+	client, err := push.NewClient(certificate.TLS(cert, key))
+	if err != nil {
+		return nil, err
+	}
+	service := &push.Service{
+		Client: client,
+		Host:   push.Production,
+	}
+
+	return service, nil
 }
 
 func checkEmptyArgs(args ...string) bool {

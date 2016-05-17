@@ -73,7 +73,6 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		encodeResponse,
 		opts...,
 	)
-
 	listDevicesHandler := kithttp.NewServer(
 		ctx,
 		makeListDevicesEndpoint(svc),
@@ -88,6 +87,13 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		encodeResponse,
 		opts...,
 	)
+	pushHandler := kithttp.NewServer(
+		ctx,
+		makePushEndpoint(svc),
+		decodePushRequest,
+		encodeResponse,
+		opts...,
+	)
 
 	r := mux.NewRouter()
 
@@ -96,6 +102,7 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 	//devices
 	r.Handle("/management/v1/devices", listDevicesHandler).Methods("GET")
 	r.Handle("/management/v1/devices/{uuid}", showDeviceHandler).Methods("GET")
+	r.Handle("/management/v1/devices/{udid}/push", pushHandler).Methods("POST")
 	// profiles
 	r.Handle("/management/v1/profiles", addProfileHandler).Methods("POST")
 	r.Handle("/management/v1/profiles", listProfilesHandler).Methods("GET")
@@ -187,6 +194,19 @@ func decodeShowDeviceRequest(_ context.Context, r *http.Request) (interface{}, e
 		return nil, errBadUUID
 	}
 	return showDeviceRequest{UUID: uuid}, nil
+}
+
+func decodePushRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	udid, ok := vars["udid"]
+	if !ok {
+		return nil, errBadRouting
+	}
+	// simple validation
+	if len(udid) != 36 {
+		return nil, errBadUUID
+	}
+	return pushRequest{UDID: udid}, nil
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

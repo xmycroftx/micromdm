@@ -327,7 +327,7 @@ func newServer(t *testing.T) (*httptest.Server, Service) {
 		t.Fatal(err)
 	}
 
-	svc := NewService(ds, ps, dc)
+	svc := NewService(ds, ps, dc, nil)
 	handler := ServiceHandler(ctx, svc, logger)
 	server := httptest.NewServer(handler)
 	return server, svc
@@ -438,7 +438,7 @@ func TestFetchDEPDevices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := NewService(ds, nil, dc)
+	svc := NewService(ds, nil, dc, nil)
 	handler := ServiceHandler(ctx, svc, logger)
 	server := httptest.NewServer(handler)
 	defer server.Close()

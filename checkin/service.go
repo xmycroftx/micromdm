@@ -56,7 +56,13 @@ func (svc service) TokenUpdate(cmd mdm.CheckinCommand) error {
 	existing.UnlockToken = unlockToken
 	existing.AwaitingConfiguration = cmd.AwaitingConfiguration
 	existing.Enrolled = true
-	return svc.devices.Save("tokenUpdate", existing)
+	err = svc.devices.Save("tokenUpdate", existing)
+	if err != nil {
+		return err
+	}
+	// trigger a push notification
+	svc.mgmt.Push(cmd.UDID)
+	return nil
 }
 
 func (svc service) Checkout(cmd mdm.CheckinCommand) error {
