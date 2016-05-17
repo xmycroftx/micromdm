@@ -9,6 +9,26 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+func TestSaveTokenUpdate(t *testing.T) {
+	ds := datastore(t)
+	defer teardown()
+	devices := addTestDevices(t, ds)
+
+	for _, d := range devices {
+		dev := &Device{
+			UUID: d.UUID,
+			AwaitingConfiguration: true,
+			PushMagic:             "some-magic-token",
+			Token:                 "some-mdm-token",
+			Enrolled:              true,
+		}
+		err := ds.Save("tokenUpdate", dev)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestNewDB(t *testing.T) {
 	defer teardown()
 	logger := log.NewLogfmtLogger(os.Stderr)

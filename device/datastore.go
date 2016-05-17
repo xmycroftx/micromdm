@@ -79,6 +79,7 @@ type Datastore interface {
 	New(src string, d *Device) (string, error)
 	GetDeviceByUDID(udid string, fields ...string) (*Device, error)
 	Devices(params ...interface{}) ([]Device, error)
+	Save(msg string, dev *Device) error
 }
 
 // UUID is a filter that can be added as a parameter to narrow down the list of returned results
@@ -160,6 +161,28 @@ func (store pgStore) Devices(params ...interface{}) ([]Device, error) {
 		return nil, errors.Wrap(err, "pgStore Devices")
 	}
 	return devices, nil
+}
+
+func (store pgStore) Save(msg string, dev *Device) error {
+	var stmt string
+	switch msg {
+	case "assign":
+		stmt = `INSERT INTO device_workflow
+		VALUES (:device_uuid, :workflow_uuid)
+		ON CONFLICT DO NOTHING;`
+
+	case "tokenUpdate":
+		stmt = `UPDATE devices SET
+		awaiting_configuration=:awaiting_configuration,
+		apple_push_magic=:apple_push_magic,
+		apple_mdm_token=:apple_mdm_token,
+		mdm_enrolled=:mdm_enrolled
+		WHERE device_uuid=:device_uuid`
+	default:
+		return errors.New("device: unsupported update msg")
+	}
+	_, err := store.NamedExec(stmt, dev)
+	return err
 }
 
 // whereer is for building args passed into a method which finds resources
