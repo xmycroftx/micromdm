@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/go-kit/kit/log"
+	kitlog "github.com/go-kit/kit/log"
 	"github.com/groob/plist"
 	"github.com/micromdm/mdm"
 )
@@ -18,7 +18,7 @@ var (
 	ErrNoKey = errors.New("There is no such key in redis.")
 )
 
-// Datastore manages MDM Payloads in redis
+// Datastore provides methods for saving and retrieving MDM commands
 type Datastore interface {
 	// Saves the payload in redis
 	// SET CommandUUID plistData
@@ -30,68 +30,20 @@ type Datastore interface {
 	DeleteCommand(deviceUDID, commandUUID string) (int, error)
 }
 
-type redisDB struct {
-	pool *redis.Pool
-}
-
-// NewDB creates a new databases connection
-func NewDB(driver, conn string, options ...func(*config) error) Datastore {
-	conf := &config{}
-	defaultLogger := log.NewLogfmtLogger(os.Stderr)
-	for _, option := range options {
-		if err := option(conf); err != nil {
-			defaultLogger.Log("err", err)
-			os.Exit(1)
-		}
-	}
+//NewDB creates a Datastore
+func NewDB(driver, conn string, logger kitlog.Logger) (Datastore, error) {
+	var ds Datastore
 	switch driver {
 	case "redis":
-		return redisDB{pool: redisPool(conn, conf.logger)}
+		ds = redisDB{pool: redisPool(conn, logger)}
+		return ds, nil
 	default:
-		conf.logger.Log("err", "unknown driver")
-		os.Exit(1)
-		return nil
+		return nil, errors.New("unknown driver")
 	}
 }
 
-func redisPool(conn string, logger log.Logger) *redis.Pool {
-	pool := &redis.Pool{
-		MaxIdle:     3,
-		IdleTimeout: 240 * time.Second,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", conn)
-			if err != nil {
-				return nil, err
-			}
-			return c, err
-		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-	}
-	checkRedisConn(pool, logger)
-	return pool
-}
-
-func checkRedisConn(pool *redis.Pool, logger log.Logger) {
-	conn := pool.Get()
-	defer conn.Close()
-
-	var dbError error
-	maxAttempts := 20
-	for attempts := 1; attempts <= maxAttempts; attempts++ {
-		_, dbError = conn.Do("PING")
-		if dbError == nil {
-			break
-		}
-		logger.Log("msg", fmt.Sprintf("could not connect to redis: %v", dbError))
-		time.Sleep(time.Duration(attempts) * time.Second)
-	}
-	if dbError != nil {
-		logger.Log("err", dbError)
-		os.Exit(1)
-	}
+type redisDB struct {
+	pool *redis.Pool
 }
 
 func (rds redisDB) SavePayload(payload *mdm.Payload) error {
@@ -170,4 +122,44 @@ func (rds redisDB) DeleteCommand(deviceUDID, commandUUID string) (int, error) {
 		return 0, err
 	}
 	return total, nil
+}
+
+func redisPool(conn string, logger kitlog.Logger) *redis.Pool {
+	pool := &redis.Pool{
+		MaxIdle:     3,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", conn)
+			if err != nil {
+				return nil, err
+			}
+			return c, err
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
+	}
+	checkRedisConn(pool, logger)
+	return pool
+}
+
+func checkRedisConn(pool *redis.Pool, logger kitlog.Logger) {
+	conn := pool.Get()
+	defer conn.Close()
+
+	var dbError error
+	maxAttempts := 20
+	for attempts := 1; attempts <= maxAttempts; attempts++ {
+		_, dbError = conn.Do("PING")
+		if dbError == nil {
+			break
+		}
+		logger.Log("msg", fmt.Sprintf("could not connect to redis: %v", dbError))
+		time.Sleep(time.Duration(attempts) * time.Second)
+	}
+	if dbError != nil {
+		logger.Log("err", dbError)
+		os.Exit(1)
+	}
 }
