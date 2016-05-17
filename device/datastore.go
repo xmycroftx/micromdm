@@ -101,6 +101,13 @@ func (store pgStore) GetDeviceByUDID(udid string, fields ...string) (*Device, er
 	return &device, sqlx.Get(store, &device, query, udid)
 }
 
+func (store pgStore) GetDeviceByUUID(udid string, fields ...string) (*Device, error) {
+	var device Device
+	s := strings.Join(fields, ", ")
+	query := `SELECT ` + s + ` FROM devices WHERE udid=$1 LIMIT 1`
+	return &device, sqlx.Get(store, &device, query, udid)
+}
+
 func (store pgStore) New(src string, d *Device) (string, error) {
 	switch src {
 	case "fetch":

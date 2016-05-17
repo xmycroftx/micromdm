@@ -35,3 +35,25 @@ func makeListDevicesEndpoint(svc Service) endpoint.Endpoint {
 		return listDevicesResponse{Err: err, devices: ds}, nil
 	}
 }
+
+type showDeviceRequest struct {
+	UUID string
+}
+
+type showDeviceResponse struct {
+	*device.Device
+	Err error `json:"error,omitempty"`
+}
+
+func (r showDeviceResponse) error() error { return r.Err }
+
+func makeShowDeviceEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(showDeviceRequest)
+		dev, err := svc.Device(req.UUID)
+		if err != nil {
+			return showDeviceResponse{Err: err}, nil
+		}
+		return showDeviceResponse{Device: dev}, nil
+	}
+}

@@ -23,6 +23,7 @@ type Service interface {
 
 	// Devices
 	Devices() ([]device.Device, error)
+	Device(uuid string) (*device.Device, error)
 	// dep
 	FetchDEPDevices() error
 }
@@ -93,6 +94,18 @@ func (svc service) Workflows() ([]workflow.Workflow, error) {
 // devices
 func (svc service) Devices() ([]device.Device, error) {
 	return svc.devices.Devices()
+}
+
+func (svc service) Device(uuid string) (*device.Device, error) {
+	devices, err := svc.devices.Devices(device.UUID{UUID: uuid})
+	if err != nil {
+		return nil, err
+	}
+	if len(devices) == 0 {
+		return nil, ErrNotFound
+	}
+	dev := devices[0]
+	return &dev, nil
 }
 
 // NewService creates a management service

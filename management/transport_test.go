@@ -25,6 +25,19 @@ func TestListDevices(t *testing.T) {
 	fetchDEPDevices(t, server, svc)
 	testListDevicesHTTP(t, svc, server, http.StatusOK)
 }
+func TestShowDevice(t *testing.T) {
+	server, svc := newServer(t)
+	defer teardown()
+	defer server.Close()
+
+	fetchDEPDevices(t, server, svc)
+	devices := testListDevicesHTTP(t, svc, server, http.StatusOK)
+
+	for _, d := range devices {
+		var dev device.Device
+		testGetHTTPInto("devices", t, svc, server, d.UUID, http.StatusOK, &dev)
+	}
+}
 
 func TestAddWorkflowWithProfiles(t *testing.T) {
 	server, svc := newServer(t)
@@ -186,6 +199,25 @@ func testDeleteHTTP(t *testing.T, svc Service, server *httptest.Server, uuid str
 	if resp.StatusCode != expectedStatus {
 		io.Copy(os.Stdout, resp.Body)
 		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
+	}
+}
+
+func testGetHTTPInto(endpoint string, t *testing.T, svc Service, server *httptest.Server, uuid string, expectedStatus int, into interface{}) {
+	client := http.DefaultClient
+	theURL := server.URL + "/management/v1/" + endpoint + "/" + uuid
+	resp, err := client.Get(theURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != expectedStatus {
+		io.Copy(os.Stdout, resp.Body)
+		t.Fatal("expected", expectedStatus, "got", resp.StatusCode)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(into); err != nil {
+		t.Log("failed to decode profiles from GET response")
+		t.Fatal(err)
 	}
 }
 
