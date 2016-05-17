@@ -14,7 +14,7 @@ type Service interface {
 	//EnrollDEP(udid string) (*device.Profile, error)
 }
 
-// NewService creates a management service
+// NewService creates a checkin service
 func NewService(devices device.Datastore, ms management.Service) Service {
 	return &service{
 		devices: devices,

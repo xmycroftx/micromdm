@@ -4,13 +4,25 @@ import (
 	"errors"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/micromdm/mdm"
 	"golang.org/x/net/context"
 )
 
-// ErrInvalidMessageType is an invalid checking command
-var ErrInvalidMessageType = errors.New("Invalid MessageType")
+// errInvalidMessageType is an invalid checking command
+var errInvalidMessageType = errors.New("Invalid MessageType")
 
-func makeConnectEndpoint(svc MDMConnectService) endpoint.Endpoint {
+type mdmConnectRequest struct {
+	mdm.Response
+}
+
+type mdmConnectResponse struct {
+	payload []byte
+	Err     error `plist:"error,omitempty"`
+}
+
+func (r mdmConnectResponse) error() error { return r.Err }
+
+func makeConnectEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(mdmConnectRequest)
 		if req.UserID != nil {
@@ -44,7 +56,7 @@ func makeConnectEndpoint(svc MDMConnectService) endpoint.Endpoint {
 			}
 			return mdmConnectResponse{payload: next}, nil
 		default:
-			return mdmConnectResponse{Err: ErrInvalidMessageType}, nil
+			return mdmConnectResponse{Err: errInvalidMessageType}, nil
 		}
 		if err != nil {
 			return mdmConnectResponse{Err: err}, nil

@@ -1,12 +1,10 @@
-package checkin
+package connect
 
 import (
-	"io/ioutil"
 	"net/http"
 
 	"golang.org/x/net/context"
 
-	"github.com/fullsailor/pkcs7"
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
@@ -20,46 +18,22 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		kithttp.ServerErrorEncoder(encodeError),
 	}
 
-	checkinHandler := kithttp.NewServer(
+	connectHandler := kithttp.NewServer(
 		ctx,
-		makeCheckinEndpoint(svc),
-		decodeMDMCheckinRequest,
+		makeConnectEndpoint(svc),
+		decodeMDMConnectRequest,
 		encodeResponse,
 		opts...,
 	)
 	r := mux.NewRouter()
 
-	r.Handle("/mdm/checkin", checkinHandler).Methods("PUT")
+	r.Handle("/mdm/connect", connectHandler).Methods("PUT")
 	return r
 }
 
-func decodeMDMCheckinRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-	var request mdmCheckinRequest
-	if err := plist.Unmarshal(data, &request); err != nil {
-		return nil, err
-	}
-	return request, nil
-}
-
-// The enrollment request is PkCS7 signed.
-// We'll ignore everything but the content for now
-func decodeMDMEnrollmentRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-	p7, err := pkcs7.Parse(data)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: We should verify but not currently possible. Apple
-	// does no provide a cert for the CA.
-	var request depEnrollmentRequest
-	if err := plist.Unmarshal(p7.Content, &request); err != nil {
+func decodeMDMConnectRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var request mdmConnectRequest
+	if err := plist.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
 	}
 	return request, nil
@@ -82,7 +56,6 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 		encodeError(ctx, e.error(), w)
 		return nil
 	}
-	// w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// for success responses
 	if e, ok := response.(statuser); ok {
 		w.WriteHeader(e.status())
@@ -96,7 +69,13 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 		return e.encodeList(w)
 
 	}
-	return plist.NewEncoder(w).Encode(response)
+
+	resp := response.(mdmConnectResponse)
+	next := resp.payload
+	if len(next) != 0 {
+		w.Write(next)
+	}
+	return nil
 }
 
 // encode errors from business-logic
@@ -109,7 +88,6 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	// w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	plist.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
 	})

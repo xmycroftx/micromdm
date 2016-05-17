@@ -11,6 +11,7 @@ import (
 	"github.com/micromdm/dep"
 	"github.com/micromdm/micromdm/checkin"
 	"github.com/micromdm/micromdm/command"
+	"github.com/micromdm/micromdm/connect"
 	"github.com/micromdm/micromdm/device"
 	"github.com/micromdm/micromdm/management"
 	"github.com/micromdm/micromdm/workflow"
@@ -30,21 +31,31 @@ func main() {
 
 	//flags
 	var (
-		flPort      = flag.String("port", envString("MICROMDM_HTTP_LISTEN_PORT", ""), "port to listen on")
-		flTLS       = flag.Bool("tls", envBool("MICROMDM_USE_TLS"), "use https")
-		flTLSCert   = flag.String("tls-cert", envString("MICROMDM_TLS_CERT", ""), "path to TLS certificate")
-		flTLSKey    = flag.String("tls-key", envString("MICROMDM_TLS_KEY", ""), "path to TLS private key")
-		flPGconn    = flag.String("postgres", envString("MICROMDM_POSTGRES_CONN_URL", ""), "postgres connection url")
-		flRedisconn = flag.String("redis", envString("MICROMDM_REDIS_CONN_URL", ""), "redis connection url")
-		flVersion   = flag.Bool("version", false, "print version information")
-		// flPushCert   = flag.String("push-cert", envString("MICROMDM_PUSH_CERT", ""), "path to push certificate")
-		// flPushPass   = flag.String("push-pass", envString("MICROMDM_PUSH_PASS", ""), "push certificate password")
-		flEnrollment = flag.String("profile", envString("MICROMDM_ENROLL_PROFILE", ""), "path to enrollment profile")
+		flPort         = flag.String("port", envString("MICROMDM_HTTP_LISTEN_PORT", ""), "port to listen on")
+		flTLS          = flag.Bool("tls", envBool("MICROMDM_USE_TLS"), "use https")
+		flTLSCert      = flag.String("tls-cert", envString("MICROMDM_TLS_CERT", ""), "path to TLS certificate")
+		flTLSKey       = flag.String("tls-key", envString("MICROMDM_TLS_KEY", ""), "path to TLS private key")
+		flPGconn       = flag.String("postgres", envString("MICROMDM_POSTGRES_CONN_URL", ""), "postgres connection url")
+		flRedisconn    = flag.String("redis", envString("MICROMDM_REDIS_CONN_URL", ""), "redis connection url")
+		flVersion      = flag.Bool("version", false, "print version information")
+		flPushCert     = flag.String("push-cert", envString("MICROMDM_PUSH_CERT", ""), "path to push certificate")
+		flPushPass     = flag.String("push-pass", envString("MICROMDM_PUSH_PASS", ""), "push certificate password")
+		flEnrollment   = flag.String("profile", envString("MICROMDM_ENROLL_PROFILE", ""), "path to enrollment profile")
+		flDEPCK        = flag.String("dep-consumer-key", envString("DEP_CONSUMER_KEY", ""), "dep consumer key")
+		flDEPCS        = flag.String("dep-consumer-secret", envString("DEP_CONSUMER_SECRET", ""), "dep consumer secret")
+		flDEPAT        = flag.String("dep-access-token", envString("DEP_ACCESS_TOKEN", ""), "dep access token")
+		flDEPAS        = flag.String("dep-access-secret", envString("DEP_ACCESS_TOKEN", ""), "dep access secret")
+		flDEPsim       = flag.Bool("depsim", false, "use default depsim credentials")
+		flDEPServerURL = flag.String("dep-server-url", envString("DEP_SERVER_URL", ""), "dep server url. for testing. Use blank if not running against depsim")
 	)
 
 	// set tls to true by default. let user set it to false
 	*flTLS = true
 	flag.Parse()
+
+	// TODO assign to push service
+	_ = flPushCert
+	_ = flPushPass
 
 	// -version flag
 	if *flVersion {
@@ -122,15 +133,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	dc := depClient(logger)
+	dc := depClient(logger, *flDEPCK, *flDEPCS, *flDEPAT, *flDEPAS, *flDEPServerURL, *flDEPsim)
 	mgmtSvc := management.NewService(deviceDB, workflowDB, dc)
 	commandSvc := command.NewService(commandDB)
 	checkinSvc := checkin.NewService(deviceDB, mgmtSvc)
+	connectSvc := connect.NewService(deviceDB, commandSvc)
 
 	httpLogger := log.NewContext(logger).With("component", "http")
 	managementHandler := management.ServiceHandler(ctx, mgmtSvc, httpLogger)
 	commandHandler := command.ServiceHandler(ctx, commandSvc, httpLogger)
 	checkinHandler := checkin.ServiceHandler(ctx, checkinSvc, httpLogger)
+	connectHandler := connect.ServiceHandler(ctx, connectSvc, httpLogger)
 
 	mux := http.NewServeMux()
 
@@ -138,6 +151,7 @@ func main() {
 	mux.Handle("/mdm/commands", commandHandler)
 	mux.Handle("/mdm/commands/", commandHandler)
 	mux.Handle("/mdm/checkin", checkinHandler)
+	mux.Handle("/mdm/connect", connectHandler)
 
 	http.Handle("/", mux)
 	http.Handle("/metrics", stdprometheus.Handler())
@@ -145,20 +159,51 @@ func main() {
 	serve(logger, *flTLS, *flPort, *flTLSKey, *flTLSCert)
 }
 
-func depClient(logger log.Logger) dep.Client {
-	config := &dep.Config{
+func depClient(logger log.Logger, consumerKey, consumerSecret, accessToken, accessSecret, serverURL string, depsim bool) dep.Client {
+	depsimDefault := &dep.Config{
 		ConsumerKey:    "CK_48dd68d198350f51258e885ce9a5c37ab7f98543c4a697323d75682a6c10a32501cb247e3db08105db868f73f2c972bdb6ae77112aea803b9219eb52689d42e6",
 		ConsumerSecret: "CS_34c7b2b531a600d99a0e4edcf4a78ded79b86ef318118c2f5bcfee1b011108c32d5302df801adbe29d446eb78f02b13144e323eb9aad51c79f01e50cb45c3a68",
 		AccessToken:    "AT_927696831c59ba510cfe4ec1a69e5267c19881257d4bca2906a99d0785b785a6f6fdeb09774954fdd5e2d0ad952e3af52c6d8d2f21c924ba0caf4a031c158b89",
 		AccessSecret:   "AS_c31afd7a09691d83548489336e8ff1cb11b82b6bca13f793344496a556b1f4972eaff4dde6deb5ac9cf076fdfa97ec97699c34d515947b9cf9ed31c99dded6ba",
 	}
-	dc, err := dep.NewClient(config, dep.ServerURL("http://localhost:9000"))
+	var config *dep.Config
+	if depsim {
+		config = depsimDefault
+	} else {
+		if checkEmptyArgs(consumerKey, consumerSecret, accessToken, accessSecret) {
+			logger.Log("err", "must specify DEP server credentials")
+			logger.Log("ConsumerKey", consumerKey, "ConsumerSecret", consumerSecret, "AccessToken", accessToken, "AccessSecret", accessSecret)
+			os.Exit(1)
+		}
+		config = &dep.Config{
+			ConsumerKey:    consumerKey,
+			ConsumerSecret: consumerSecret,
+			AccessToken:    accessToken,
+			AccessSecret:   accessSecret,
+		}
+	}
+	var client dep.Client
+	var err error
+	if serverURL != "" {
+		client, err = dep.NewClient(config, dep.ServerURL(serverURL))
+	} else {
+		client, err = dep.NewClient(config)
+	}
 	if err != nil {
 		logger.Log("err", err)
 		os.Exit(1)
 
 	}
-	return dc
+	return client
+}
+
+func checkEmptyArgs(args ...string) bool {
+	for _, arg := range args {
+		if arg == "" {
+			return true
+		}
+	}
+	return false
 }
 
 // choose http or https
