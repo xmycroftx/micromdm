@@ -57,10 +57,6 @@ func main() {
 	*flTLS = true
 	flag.Parse()
 
-	// TODO assign to push service
-	_ = flPushCert
-	_ = flPushPass
-
 	// -version flag
 	if *flVersion {
 		fmt.Printf("micromdm - Version %s\n", Version)
