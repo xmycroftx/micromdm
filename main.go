@@ -50,6 +50,7 @@ func main() {
 		flDEPAS        = flag.String("dep-access-secret", envString("DEP_ACCESS_TOKEN", ""), "dep access secret")
 		flDEPsim       = flag.Bool("depsim", false, "use default depsim credentials")
 		flDEPServerURL = flag.String("dep-server-url", envString("DEP_SERVER_URL", ""), "dep server url. for testing. Use blank if not running against depsim")
+		flPkgRepo      = flag.String("pkg-repo", envString("MICROMDM_PKG_REPO", ""), "path to pkg repo")
 	)
 
 	// set tls to true by default. let user set it to false
@@ -170,6 +171,9 @@ func main() {
 	mux.Handle("/mdm/commands/", commandHandler)
 	mux.Handle("/mdm/checkin", checkinHandler)
 	mux.Handle("/mdm/connect", connectHandler)
+	if *flPkgRepo != "" {
+		mux.Handle("/repo/", http.StripPrefix("/repo/", http.FileServer(http.Dir(*flPkgRepo))))
+	}
 
 	http.Handle("/", mux)
 	http.Handle("/metrics", stdprometheus.Handler())
