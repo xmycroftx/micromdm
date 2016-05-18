@@ -26,10 +26,15 @@ type Service interface {
 	// Devices
 	Devices() ([]device.Device, error)
 	Device(uuid string) (*device.Device, error)
-	// dep
-	FetchDEPDevices() error
-	// push
+	// AssignWorkflow assigns a workflow to a device
+	AssignWorkflow(deviceUUID, workflowUUID string) error
+
+	// push sends a new push notification to the device
+	// returning the notification ID
 	Push(deviceUDID string) (string, error)
+
+	// FetchDEPDevices updates the device datastore with devices from DEP
+	FetchDEPDevices() error
 }
 
 // NewService creates a management service
@@ -140,4 +145,15 @@ func (svc service) Device(uuid string) (*device.Device, error) {
 	}
 	dev := devices[0]
 	return &dev, nil
+}
+
+func (svc service) AssignWorkflow(deviceUUID, workflowUUID string) error {
+	dev, err := svc.devices.GetDeviceByUUID(deviceUUID,
+		[]string{"device_uuid"}...,
+	)
+	if err != nil {
+		return errors.Wrap(err, "management: assign workflow")
+	}
+	dev.Workflow = workflowUUID
+	return svc.devices.Save("assignWorkflow", dev)
 }

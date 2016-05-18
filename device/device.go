@@ -26,7 +26,7 @@ type Device struct {
 	Token                  string           `json:"token,omitempty" db:"apple_mdm_token,omitempty"`
 	UnlockToken            string           `json:"unlock_token,omitempty" db:"unlock_token,omitempty"`
 	Enrolled               bool             `json:"enrolled,omitempty" db:"mdm_enrolled,omitempty"`
-	Workflow               string           `json:"workflow,omitempty" db:"workflow_uuid,omitempty"`
+	Workflow               string           `json:"workflow_uuid,omitempty" db:"workflow_uuid,omitempty"`
 	DEPDevice              bool             `json:"dep_device,omitempty" db:"dep_device,omitempty"`
 	Description            string           `json:"description,omitempty" db:"description"`
 	Model                  string           `json:"model,omitempty" db:"model"`

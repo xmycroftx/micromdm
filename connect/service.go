@@ -55,7 +55,6 @@ func (svc service) checkRequeue(deviceUDID string) (int, error) {
 			UDID:        deviceUDID,
 			RequestType: "DeviceConfigured",
 		}
-
 		_, err := svc.commands.NewCommand(cmdRequest)
 		if err != nil {
 			return 0, err

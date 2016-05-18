@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -78,6 +79,11 @@ func main() {
 		logger.Log("err", "must set path to enrollment profile")
 		os.Exit(1)
 	}
+	enrollmentProfile, err := ioutil.ReadFile(*flEnrollment)
+	if err != nil {
+		logger.Log("err", err)
+		os.Exit(1)
+	}
 
 	// check cert and key if -tls=true
 	if *flTLS {
@@ -148,7 +154,7 @@ func main() {
 	dc := depClient(logger, *flDEPCK, *flDEPCS, *flDEPAT, *flDEPAS, *flDEPServerURL, *flDEPsim)
 	mgmtSvc := management.NewService(deviceDB, workflowDB, dc, pushSvc)
 	commandSvc := command.NewService(commandDB)
-	checkinSvc := checkin.NewService(deviceDB, mgmtSvc)
+	checkinSvc := checkin.NewService(deviceDB, mgmtSvc, commandSvc, enrollmentProfile)
 	connectSvc := connect.NewService(deviceDB, commandSvc)
 
 	httpLogger := log.NewContext(logger).With("component", "http")

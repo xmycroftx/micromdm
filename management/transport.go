@@ -87,6 +87,13 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		encodeResponse,
 		opts...,
 	)
+	updateDeviceHandler := kithttp.NewServer(
+		ctx,
+		makeUpdateDeviceEndpoint(svc),
+		decodeUpdateDeviceRequest,
+		encodeResponse,
+		opts...,
+	)
 	pushHandler := kithttp.NewServer(
 		ctx,
 		makePushEndpoint(svc),
@@ -102,6 +109,7 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 	//devices
 	r.Handle("/management/v1/devices", listDevicesHandler).Methods("GET")
 	r.Handle("/management/v1/devices/{uuid}", showDeviceHandler).Methods("GET")
+	r.Handle("/management/v1/devices/{uuid}", updateDeviceHandler).Methods("PATCH")
 	r.Handle("/management/v1/devices/{udid}/push", pushHandler).Methods("POST")
 	// profiles
 	r.Handle("/management/v1/profiles", addProfileHandler).Methods("POST")
@@ -207,6 +215,24 @@ func decodePushRequest(_ context.Context, r *http.Request) (interface{}, error) 
 		return nil, errBadUUID
 	}
 	return pushRequest{UDID: udid}, nil
+}
+
+func decodeUpdateDeviceRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	deviceUUID, ok := vars["uuid"]
+	if !ok {
+		return nil, errBadRouting
+	}
+	// simple validation
+	if len(deviceUUID) != 36 {
+		return nil, errBadUUID
+	}
+	var request = updateDeviceRequest{DeviceUUID: deviceUUID}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err == io.EOF {
+		return nil, errEmptyRequest
+	}
+	return request, nil
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

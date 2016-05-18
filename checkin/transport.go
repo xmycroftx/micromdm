@@ -1,6 +1,7 @@
 package checkin
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -27,9 +28,17 @@ func ServiceHandler(ctx context.Context, svc Service, logger kitlog.Logger) http
 		encodeResponse,
 		opts...,
 	)
+	depEnrollmentHandler := kithttp.NewServer(
+		ctx,
+		makeDEPEnrollmentEndpoint(svc),
+		decodeMDMEnrollmentRequest,
+		encodeDEPEnrollmentResponse,
+		opts...,
+	)
 	r := mux.NewRouter()
 
 	r.Handle("/mdm/checkin", checkinHandler).Methods("PUT")
+	r.Handle("/mdm/checkin", depEnrollmentHandler).Methods("POST")
 	return r
 }
 
@@ -38,6 +47,7 @@ func decodeMDMCheckinRequest(_ context.Context, r *http.Request) (interface{}, e
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(string(data))
 	var request mdmCheckinRequest
 	if err := plist.Unmarshal(data, &request); err != nil {
 		return nil, err
@@ -75,6 +85,16 @@ type statuser interface {
 
 type listEncoder interface {
 	encodeList(w http.ResponseWriter) error
+}
+
+func encodeDEPEnrollmentResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(errorer); ok && e.error() != nil {
+		encodeError(ctx, e.error(), w)
+		return nil
+	}
+	resp := response.(depEnrollmentResponse)
+	w.Write(resp.Profile)
+	return nil
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

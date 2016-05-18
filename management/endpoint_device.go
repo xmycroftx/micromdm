@@ -57,3 +57,26 @@ func makeShowDeviceEndpoint(svc Service) endpoint.Endpoint {
 		return showDeviceResponse{Device: dev}, nil
 	}
 }
+
+type updateDeviceRequest struct {
+	DeviceUUID string  `json:"-"`
+	Workflow   *string `json:"workflow_uuid,omitempty" db:"workflow_uuid,omitempty"`
+}
+
+type updateDeviceResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r updateDeviceResponse) error() error { return r.Err }
+func (r updateDeviceResponse) status() int  { return http.StatusNoContent }
+
+func makeUpdateDeviceEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(updateDeviceRequest)
+		var err error
+		if req.Workflow != nil {
+			err = svc.AssignWorkflow(req.DeviceUUID, *req.Workflow)
+		}
+		return updateDeviceResponse{Err: err}, nil
+	}
+}

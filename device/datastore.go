@@ -92,6 +92,15 @@ func (p UUID) where() string {
 	return fmt.Sprintf("device_uuid = '%s'", p.UUID)
 }
 
+// SerialNumber is a filter
+type SerialNumber struct {
+	SerialNumber string
+}
+
+func (p SerialNumber) where() string {
+	return fmt.Sprintf("serial_number = '%s'", p.SerialNumber)
+}
+
 type pgStore struct {
 	*sqlx.DB
 }
@@ -106,7 +115,7 @@ func (store pgStore) GetDeviceByUDID(udid string, fields ...string) (*Device, er
 func (store pgStore) GetDeviceByUUID(uuid string, fields ...string) (*Device, error) {
 	var device Device
 	s := strings.Join(fields, ", ")
-	query := `SELECT ` + s + ` FROM devices WHERE udid=$1 LIMIT 1`
+	query := `SELECT ` + s + ` FROM devices WHERE device_uuid=$1 LIMIT 1`
 	return &device, sqlx.Get(store, &device, query, uuid)
 }
 
@@ -167,11 +176,10 @@ func (store pgStore) Devices(params ...interface{}) ([]Device, error) {
 func (store pgStore) Save(msg string, dev *Device) error {
 	var stmt string
 	switch msg {
-	case "assign":
-		stmt = `INSERT INTO device_workflow
-		VALUES (:device_uuid, :workflow_uuid)
-		ON CONFLICT DO NOTHING;`
-
+	case "assignWorkflow":
+		stmt = `UPDATE devices SET
+		workflow_uuid=:workflow_uuid
+		WHERE device_uuid=:device_uuid`
 	case "tokenUpdate":
 		stmt = `UPDATE devices SET
 		awaiting_configuration=:awaiting_configuration,
@@ -179,6 +187,7 @@ func (store pgStore) Save(msg string, dev *Device) error {
 		apple_mdm_token=:apple_mdm_token,
 		mdm_enrolled=:mdm_enrolled
 		WHERE device_uuid=:device_uuid`
+
 	case "checkout":
 		stmt = `UPDATE devices SET
 		mdm_enrolled=:mdm_enrolled
@@ -271,5 +280,6 @@ func migrate(db *sqlx.DB) {
 	  awaiting_configuration boolean
 	  );
 	  CREATE UNIQUE INDEX IF NOT EXISTS serial_idx ON devices (serial_number);`
+
 	db.MustExec(schema)
 }

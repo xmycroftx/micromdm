@@ -52,3 +52,14 @@ type depEnrollmentResponse struct {
 }
 
 func (r depEnrollmentResponse) error() error { return r.Err }
+
+func makeDEPEnrollmentEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(depEnrollmentRequest)
+		profile, err := svc.EnrollDEP(req.DEPEnrollmentRequest.UDID, req.DEPEnrollmentRequest.Serial)
+		if err != nil {
+			return depEnrollmentResponse{Err: err}, nil
+		}
+		return depEnrollmentResponse{Profile: profile}, nil
+	}
+}
