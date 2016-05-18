@@ -39,3 +39,15 @@ Installation and configuration instructions will be maintained on the [website](
 An administrator can group a DEP enrollment profile, a list of applications and a list of configuration profiles into a workflow and assign the workflow to a device.  
 If a device has an assigned workflow, `micromdm` will configure the device according to the workflow. 
 If you're familiar with Munki's [manifest](https://github.com/munki/munki/wiki/Manifests) feature, workflows work in a similar way.
+
+# Build instructions
+To build the project from source you will need the [`go`](https://golang.org/dl/) and [`glide`](https://github.com/Masterminds/glide) tools, with a valid `GOPATH`.  
+If you're new to Go see [Writing, building, installing, and testing Go code](https://www.youtube.com/watch?v=XCsL89YtqCs) and [Resources for new Go programmers](http://dave.cheney.net/resources-for-new-go-programmers) to get started.
+
+* simply run `make` to install a new build.
+* `make deps` will install the necessary dependencies. after that you can use `go build`, `go test` etc.
+* run `make docker` to build a docker container from the local source.  
+
+If you want to run locally for testing/development, an easy way to run postgres and redis is by using `docker-compose`
+`docker-compose -f compose-pg.yml up`
+

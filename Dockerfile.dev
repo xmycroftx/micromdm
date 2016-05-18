@@ -15,7 +15,8 @@ RUN mkdir -p /go/src/github.com/micromdm/micromdm/
 WORKDIR /go/src/github.com/micromdm/micromdm/
 COPY . /go/src/github.com/micromdm/micromdm/
 
-#RUN glide install
+RUN glide install
+
 RUN GOGC=500 go build && mv micromdm /
 
 CMD ["/micromdm"]
