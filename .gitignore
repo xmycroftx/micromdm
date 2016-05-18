@@ -1,6 +1,7 @@
 vendor/
 .docker/data/root/
 micromdm
+build/
 .k8/
 *.crt
 *.key
