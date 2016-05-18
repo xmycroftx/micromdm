@@ -1,5 +1,5 @@
-hash: ed9457203c0391ff0b5911a1b1a00a0a7fad0dd8e869a26cb3aeee377656d252
-updated: 2016-05-10T08:51:32.591596325-04:00
+hash: f2bc5d7f285bb8ff56455a34d938e916230464a8964e8248d44a7d49b3b6e934
+updated: 2016-05-18T00:11:11.569405705-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -17,7 +17,7 @@ imports:
   - redis
   - internal
 - name: github.com/go-kit/kit
-  version: bf1de9351592667fd8739200fa355b6a5c53adbf
+  version: 4479f0122fd25f40d8b429ce76e193b6e2319ff4
   vcs: git
   subpackages:
   - endpoint
@@ -25,7 +25,6 @@ imports:
   - metrics
   - metrics/prometheus
   - transport/http
-  - log/levels
 - name: github.com/go-logfmt/logfmt
   version: a0ff333161fe5c2daed0ba52d1792bd3d2531b94
 - name: github.com/go-stack/stack
@@ -57,7 +56,7 @@ imports:
 - name: github.com/micromdm/dep
   version: 38c81b11544f31c2be14e0b3bcfa12f656fcc709
 - name: github.com/micromdm/mdm
-  version: d64bbc40594da804b956062912d62453cad70459
+  version: ff5dae3256bfea7dbaa543145f0c76410055785c
 - name: github.com/pkg/errors
   version: 42fa80f2ac6ed17a977ce826074bd3009593fa9d
 - name: github.com/prometheus/client_golang
@@ -80,8 +79,8 @@ imports:
   version: 2861f2a5612806afe88232539f5e4255d39ae544
   subpackages:
   - certificate
-  - payload
   - push
+  - payload
   - payload/badge
 - name: github.com/satori/go.uuid
   version: f9ab0dce87d815821e221626b772e3475a0d2749
@@ -94,7 +93,7 @@ imports:
   version: b797637b7aeeed133049c7281bfa31dcc9ca42d6
   subpackages:
   - context
-  - context/ctxhttp
   - http2
+  - context/ctxhttp
   - http2/hpack
 devImports: []

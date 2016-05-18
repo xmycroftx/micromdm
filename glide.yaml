@@ -17,11 +17,7 @@ import:
 - package: github.com/jmoiron/sqlx
 - package: github.com/lib/pq
 - package: github.com/micromdm/mdm
-- package: github.com/micromdm/micromdm
-  subpackages:
-  - checkin
-  - command
-  - device
+  version: master
 - package: github.com/prometheus/client_golang
   subpackages:
   - prometheus
