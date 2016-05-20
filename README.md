@@ -44,7 +44,7 @@ If you're familiar with Munki's [manifest](https://github.com/munki/munki/wiki/M
 
 ## If you know Go
 
-1. `go get githbu.com/micromdm/micromdm`
+1. `go get github.com/micromdm/micromdm`
 2. `cd $GOPATH/src/github.com/micromdm/micromdm` 
 3. `glide install` install the necessary dependencies into /vendor folder
 4. `go build` or `go install`
