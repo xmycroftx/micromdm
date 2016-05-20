@@ -62,13 +62,14 @@ A few helpful resources for getting started with Go.
 * [How to write Go code](https://golang.org/doc/code.html)
 * [GOPATH - go wiki page](https://github.com/golang/go/wiki/GOPATH)
 
-To build MicroMDM you will need to install:  
+To build MicroMDM you will need to:  
 
-1. [`go`](https://golang.org/dl/)  
-2. [`glide`](https://github.com/Masterminds/glide) 
+1. Download and install [`Go`](https://golang.org/dl/)  
+2. Install [`glide`](https://github.com/Masterminds/glide) 
 3. Set the `GOPATH` as explained above.
 4. `mkdir -p $GOPATH/src/github.com/micromdm`
-5. `git clone` the project into the above folder. The repo must always be in the folder `$GOPATH/src/github.com/micromdm/micromdm` even if you forked the project. Add a git remote to your fork.
+5. `git clone` the project into the above folder.  
+The repo must always be in the folder `$GOPATH/src/github.com/micromdm/micromdm` even if you forked the project. Add a git remote to your fork.  
 6. `glide install` The glide command will download and install all necessary dependencies for the project to compile.
 7. `go build` or `go install`
 8. File an issue or a pull request if the instructions were unclear.
