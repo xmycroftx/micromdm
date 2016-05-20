@@ -50,7 +50,7 @@ If you're familiar with Munki's [manifest](https://github.com/munki/munki/wiki/M
 4. `go build` or `go install`
 
 ## If you're new to Go
-Go is a bit different from other languages in it's requirements for how it expects it's programmers to organize Go code on a system. 
+Go is a bit different from other languages in its requirements for how it expects its programmers to organize Go code on a system. 
 First, Go expects you to choose a folder, called a workspace(you can name it anything you'd like). The path to this folder must always be set in an environment variable - `GOPATH`(example: `GOPATH=/Users/groob/code/go`)  
 Your `GOPATH` must have thee subfolders - `bin`, `pkg` and `src`, and any code you create must live inside the `src` folder. It's also helpful to add `$GOPATH/bin` to your environment's `PATH` as that is where `go install` will place go binaries that you build.
 
