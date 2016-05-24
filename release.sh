@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="0.1.0.0-dev"
+VERSION="0.1.0.1-dev"
 NAME=micromdm
 
 echo "Building $NAME version $VERSION"
