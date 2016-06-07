@@ -1,4 +1,3 @@
-vendor/
 .docker/data/root/
 micromdm
 build/
