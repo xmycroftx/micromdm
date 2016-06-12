@@ -1,0 +1,52 @@
+version: '2'
+services:
+  redis:
+    image: redis
+    restart: always
+    volumes:
+     - redis:/data 
+  postgres:
+    image: postgres
+    restart: always
+    volumes:
+      - postgresql:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=micromdm
+      - POSTGRES_PASSWORD=micromdm
+      - POSTGRES_DB=micromdm
+      - SSLMODE=disable
+  mdm:
+    build: .
+    image: micromdm
+#    image: micromdm/micromdm:latest
+    links:
+      - postgres:db
+      - redis
+    depends_on:
+      - postgres 
+      - redis
+    ports:
+      - "6443:6443"
+    volumes:
+      - ./mdm:/mdm
+    environment:
+      MICROMDM_HTTP_LISTEN_PORT: 8443
+      MICROMDM_USE_TLS: 'true' 
+      MICROMDM_TLS_CERT: /mdm/mdm.cer
+      MICROMDM_TLS_KEY: /mdm/mdm.key
+      MICROMDM_PUSH_CERT: /mdm/push.p12
+      MICROMDM_PUSH_PASS: sekret
+      MICROMDM_ENROLL_PROFILE: /mdm/enroll.mobileConfig
+      MICROMDM_PKG_REPO: /mdm/pkgrepo
+#      MICROMDM_POSTGRES_CONN_URL: 'postgresql://micromdm:micromdm@db/micromdm?sslmode=disable'
+      DEP_CONSUMER_KEY: na
+      DEP_CONSUMER_SECRET: na
+      DEP_ACCESS_TOKEN: na
+      DEP_ACCESS_SECRET: na
+      DEP_USE_DEPSIM: 'false' 
+      DEP_SERVER_URL: NA 
+
+volumes:
+  redis:
+  postgresql:
+  mdm:
