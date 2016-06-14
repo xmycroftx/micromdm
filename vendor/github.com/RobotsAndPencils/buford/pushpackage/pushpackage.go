@@ -5,10 +5,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/rsa"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"io"
 	"os"
 
@@ -89,15 +87,9 @@ func (p *Package) File(name, src string) {
 
 // Sign the package and close.
 // Passbook needs Apple's intermediate WWDR certificate.
-func (p *Package) Sign(cert tls.Certificate, wwdr *x509.Certificate) error {
+func (p *Package) Sign(cert *x509.Certificate, key *rsa.PrivateKey, wwdr *x509.Certificate) error {
 	if p.err != nil {
 		return p.err
-	}
-
-	// assert that private key is RSA
-	key, ok := cert.PrivateKey.(*rsa.PrivateKey)
-	if !ok {
-		return errors.New("expected RSA private key type")
 	}
 
 	manifestBytes, err := json.Marshal(p.manifest)
@@ -117,7 +109,7 @@ func (p *Package) Sign(cert tls.Certificate, wwdr *x509.Certificate) error {
 	if err != nil {
 		return err
 	}
-	sig, err := pkcs7.Sign2(bytes.NewReader(manifestBytes), cert.Leaf, key, wwdr)
+	sig, err := pkcs7.Sign2(bytes.NewReader(manifestBytes), cert, key, wwdr)
 	if err != nil {
 		return err
 	}

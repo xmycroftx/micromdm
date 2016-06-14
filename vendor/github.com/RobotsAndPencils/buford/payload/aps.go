@@ -7,7 +7,6 @@ import (
 )
 
 // APS is Apple's reserved namespace.
-// Use it for payloads destined to mobile devices (iOS).
 type APS struct {
 	// Alert dictionary.
 	Alert Alert
@@ -49,9 +48,7 @@ type Alert struct {
 
 // isSimple alert with only Body set.
 func (a *Alert) isSimple() bool {
-	return len(a.Title) == 0 && len(a.LaunchImage) == 0 &&
-		len(a.TitleLocKey) == 0 && len(a.TitleLocArgs) == 0 &&
-		len(a.LocKey) == 0 && len(a.LocArgs) == 0 && len(a.ActionLocKey) == 0
+	return len(a.Title) == 0 && len(a.TitleLocKey) == 0 && len(a.TitleLocArgs) == 0 && len(a.LocKey) == 0 && len(a.LocArgs) == 0 && len(a.ActionLocKey) == 0 && len(a.LaunchImage) == 0
 }
 
 // isZero if no Alert fields are set.
@@ -59,10 +56,11 @@ func (a *Alert) isZero() bool {
 	return len(a.Body) == 0 && a.isSimple()
 }
 
-// Map returns the payload as a map that you can customize
+// Map returns the APS payload as a map that you can customize
 // before serializing it to JSON.
+// TODO: Make this map implement json.Marshaler for use with Service.Push.
 func (a *APS) Map() map[string]interface{} {
-	aps := make(map[string]interface{}, 5)
+	aps := make(map[string]interface{}, 4)
 
 	if !a.Alert.isZero() {
 		if a.Alert.isSimple() {
@@ -84,7 +82,7 @@ func (a *APS) Map() map[string]interface{} {
 		aps["category"] = a.Category
 	}
 
-	// wrap in "aps" to form the final payload
+	// wrap in "aps" to form final payload
 	return map[string]interface{}{"aps": aps}
 }
 
@@ -93,7 +91,7 @@ func (a APS) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.Map())
 }
 
-// Validate that a payload has the correct fields.
+// Validate APS payload.
 func (a *APS) Validate() error {
 	if a == nil {
 		return ErrIncomplete

@@ -76,7 +76,7 @@ imports:
 - name: github.com/prometheus/procfs
   version: abf152e5f3e97f2fafac028d2cc06c1feb87ffa5
 - name: github.com/RobotsAndPencils/buford
-  version: 35ad6abe73a07b1a0730ab2c21784820dd613598
+  version: 2861f2a5612806afe88232539f5e4255d39ae544
   subpackages:
   - certificate
   - push

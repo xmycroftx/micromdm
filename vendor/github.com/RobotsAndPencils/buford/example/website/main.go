@@ -1,7 +1,8 @@
 package main
 
 import (
-	"crypto/tls"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"html/template"
@@ -21,18 +22,19 @@ var (
 	website = pushpackage.Website{
 		Name:            "Buford",
 		PushID:          "web.com.github.RobotsAndPencils.buford",
-		AllowedDomains:  []string{"https://e31340d3.ngrok.io"},
-		URLFormatString: `https://e31340d3.ngrok.io/click?q=%@`,
+		AllowedDomains:  []string{"https://9aea51d1.ngrok.io"},
+		URLFormatString: `https://9aea51d1.ngrok.io/click?q=%@`,
 		// AuthenticationToken identifies the user (16+ characters)
 		AuthenticationToken: "19f8d7a6e9fb8a7f6d9330dabe",
-		WebServiceURL:       "https://e31340d3.ngrok.io",
+		WebServiceURL:       "https://9aea51d1.ngrok.io",
 	}
 
-	// Cert for signing push packages.
-	cert tls.Certificate
+	// Cert and private key for signing push packages.
+	cert       *x509.Certificate
+	privateKey *rsa.PrivateKey
 
 	// Service and device token to send push notifications.
-	service     *push.Service
+	service     push.Service
 	deviceToken string
 
 	templates = template.Must(template.ParseFiles("index.html", "request.html"))
@@ -55,12 +57,8 @@ func pushHandler(w http.ResponseWriter, r *http.Request) {
 		// URLArgs must match placeholders in URLFormatString
 		URLArgs: []string{"hello"},
 	}
-	b, err := json.Marshal(p)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	id, err := service.Push(deviceToken, nil, b)
+	id, err := service.Push(deviceToken, nil, p)
 	if err != nil {
 		log.Println(err)
 		return
@@ -87,7 +85,7 @@ func pushPackagesHandler(w http.ResponseWriter, r *http.Request) {
 	pkg.File("icon.iconset/icon_32x32.png", "../../testdata/gopher.png")
 	pkg.File("icon.iconset/icon_16x16@2x.png", "../../testdata/gopher.png")
 	pkg.File("icon.iconset/icon_16x16.png", "../../testdata/gopher.png")
-	if err := pkg.Sign(cert, nil); err != nil {
+	if err := pkg.Sign(cert, privateKey, nil); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -139,17 +137,20 @@ func main() {
 	flag.Parse()
 
 	var err error
-	cert, err = certificate.Load(filename, password)
+	cert, privateKey, err = certificate.Load(filename, password)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	client, err := push.NewClient(cert)
+	client, err := push.NewClient(certificate.TLS(cert, privateKey))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	service = push.NewService(client, push.Production)
+	service = push.Service{
+		Client: client,
+		Host:   push.Production,
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", indexHandler).Methods("GET")

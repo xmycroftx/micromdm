@@ -1,17 +1,14 @@
 // Package certificate loads Push Services certificates exported from your
 // Keychain in Personal Information Exchange format (*.p12).
-//
-// If you prefer to use *.PEM files, you can of course use tls.LoadX509KeyPair
-// or tls.X509KeyPair from the standard library.
 package certificate
 
 import (
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
 
 	"golang.org/x/crypto/pkcs12"
 )
@@ -22,45 +19,40 @@ var (
 )
 
 // Load a .p12 certificate from disk.
-func Load(filename, password string) (tls.Certificate, error) {
+func Load(filename, password string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	p12, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("Unable to load %s: %v", filename, err)
+		return nil, nil, fmt.Errorf("Unable to load %s: %v", filename, err)
 	}
 	return Decode(p12, password)
 }
 
 // Decode and verify an in memory .p12 certificate (DER binary format).
-func Decode(p12 []byte, password string) (tls.Certificate, error) {
+func Decode(p12 []byte, password string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	// decode an x509.Certificate to verify
 	privateKey, cert, err := pkcs12.Decode(p12, password)
 	if err != nil {
-		return tls.Certificate{}, err
+		return nil, nil, err
 	}
 	if err := verify(cert); err != nil {
-		return tls.Certificate{}, err
+		return nil, nil, err
 	}
 
-	// wraps x509 certificate as a tls.Certificate:
+	// assert that private key is RSA
+	priv, ok := privateKey.(*rsa.PrivateKey)
+	if !ok {
+		return nil, nil, errors.New("expected RSA private key type")
+	}
+	return cert, priv, nil
+}
+
+// TLS wraps an x509 certificate as a tls.Certificate.
+func TLS(cert *x509.Certificate, privateKey *rsa.PrivateKey) tls.Certificate {
 	return tls.Certificate{
 		Certificate: [][]byte{cert.Raw},
 		PrivateKey:  privateKey,
 		Leaf:        cert,
-	}, nil
-}
-
-// TopicFromCert extracts topic from a certificate's common name.
-func TopicFromCert(cert tls.Certificate) string {
-	commonName := cert.Leaf.Subject.CommonName
-
-	var topic string
-	// Apple Push Services: {bundle}
-	// Apple Development IOS Push Services: {bundle}
-	n := strings.Index(commonName, ":")
-	if n != -1 {
-		topic = strings.TrimSpace(commonName[n+1:])
 	}
-	return topic
 }
 
 // verify checks if a certificate has expired

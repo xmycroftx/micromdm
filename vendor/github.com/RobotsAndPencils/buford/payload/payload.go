@@ -1,9 +1,9 @@
-// Package payload prepares a JSON payload to push.
+// Package payload serializes a JSON payload to push.
 package payload
 
 import "errors"
 
-// Validation errors.
+// validation errors
 var (
 	ErrIncomplete = errors.New("payload does not contain necessary fields")
 )
