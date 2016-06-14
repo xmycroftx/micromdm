@@ -1,18 +1,18 @@
 hash: e3e64879babd521567b9ebe3e3de6d33f43eaca8fffa2b0f3bcf6ce0ec62f4c3
-updated: 2016-06-14T22:11:15.812602521+10:00
+updated: 2016-06-14T10:12:25.349241082-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/fullsailor/pkcs7
-  version: 2585af45975b11f1d7502bb6c01556c29efb54ce
+  version: 9ab43480afa35dcb6df2c5b80e5e158f421c03c7
 - name: github.com/garyburd/go-oauth
   version: 719b069913e1151a73ea30d2ea4f90deda3ce234
   subpackages:
   - oauth
 - name: github.com/garyburd/redigo
-  version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
+  version: b8dc90050f24c1a73a52f107f3f575be67b21b7c
   subpackages:
   - redis
   - internal
@@ -26,27 +26,27 @@ imports:
   - metrics/prometheus
   - transport/http
 - name: github.com/go-logfmt/logfmt
-  version: a0ff333161fe5c2daed0ba52d1792bd3d2531b94
+  version: d4327190ff838312623b09bfeb50d7c93c8d9c1d
 - name: github.com/go-stack/stack
-  version: ac4c579c437a23e1a15814c867ccb82122fb383b
+  version: 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
 - name: github.com/golang/protobuf
-  version: bf531ff1a004f24ee53329dfd5ce0b41bfdc17df
+  version: 8616e8ee5e20a1704615e6c8d7afcdac06087a67
   subpackages:
   - proto
 - name: github.com/gorilla/context
-  version: a8d44e7d8e4d532b6a27a02dd82abb31cc1b01bd
+  version: aed02d124ae4a0e94fea4541c8effd05bf0c8296
 - name: github.com/gorilla/mux
-  version: 0eeaf8392f5b04950925b8a69fe70f110fa7cbfc
+  version: 9fa818a44c2bf1396a17f9d5a3c0f6dd39d2ff8e
 - name: github.com/groob/plist
-  version: 960422c558dc729e57204822eefad0636185ba2b
+  version: e9ca5cd129407b401d850bc3248338865a7490ae
 - name: github.com/jmoiron/sqlx
-  version: 398dd5876282499cdfd4cb8ea0f31a672abe9495
+  version: e4a302b8d3a49ad2790f2232df7fcd668f54366f
   subpackages:
   - reflectx
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/lib/pq
-  version: 3cd0097429be7d611bb644ef85b42bfb102ceea4
+  version: ee1442bda7bd1b6a84e913bdb421cb1874ec629d
   subpackages:
   - oid
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -58,9 +58,9 @@ imports:
 - name: github.com/micromdm/mdm
   version: 156db12f2588e3f9c7f02236f44d0ea6cb4f012a
 - name: github.com/pkg/errors
-  version: 42fa80f2ac6ed17a977ce826074bd3009593fa9d
+  version: 01fa4104b9c248c8945d14d9f128454d5b28d595
 - name: github.com/prometheus/client_golang
-  version: 90c15b5efa0dc32a7d259234e02ac9a99e6d3b82
+  version: 488edd04dc224ba64c401747cd0a4b5f05dfb234
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
@@ -68,7 +68,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 40456948a47496dc22168e6af39297a2f8fbf38c
+  version: 3a184ff7dfd46b9091030bf2e56c71112b0ddb0e
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -76,7 +76,7 @@ imports:
 - name: github.com/prometheus/procfs
   version: abf152e5f3e97f2fafac028d2cc06c1feb87ffa5
 - name: github.com/RobotsAndPencils/buford
-  version: 2861f2a5612806afe88232539f5e4255d39ae544
+  version: 35ad6abe73a07b1a0730ab2c21784820dd613598
   subpackages:
   - certificate
   - push
@@ -87,17 +87,18 @@ imports:
 - name: github.com/rs/xhandler
   version: d9d9599b6aaf6a058cb7b1f48291ded2cbd13390
 - name: github.com/satori/go.uuid
-  version: f9ab0dce87d815821e221626b772e3475a0d2749
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: golang.org/x/crypto
-  version: 91ab96ae987aef3e74ab78b3aaf026109d206148
+  version: f3241ce8505855877cc8a9717bd61a0f7c4ea83c
   subpackages:
   - pkcs12
   - pkcs12/internal/rc2
 - name: golang.org/x/net
-  version: b797637b7aeeed133049c7281bfa31dcc9ca42d6
+  version: 3f122ce3dbbe488b7e6a8bdb26f41edec852a40b
   subpackages:
   - context
   - http2
   - context/ctxhttp
   - http2/hpack
+  - lex/httplex
 devImports: []

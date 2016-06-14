@@ -1,10 +1,10 @@
 # Buford
 
-Apple Push Notification (APN) Provider for Go 1.6 and HTTP/2.
+Apple Push Notification (APN) Provider library for Go 1.6 and HTTP/2. Send notifications to iOS, macOS, tvOS and watchOS. Buford can also sign push packages for Safari notifications and Wallet passes.
 
 Please see [releases](https://github.com/RobotsAndPencils/buford/releases) for updates.
 
-[![GoDoc](https://godoc.org/github.com/RobotsAndPencils/buford?status.svg)](https://godoc.org/github.com/RobotsAndPencils/buford) [![Build Status](https://travis-ci.org/RobotsAndPencils/buford.svg?branch=ci)](https://travis-ci.org/RobotsAndPencils/buford)
+[![GoDoc](https://godoc.org/github.com/RobotsAndPencils/buford?status.svg)](https://godoc.org/github.com/RobotsAndPencils/buford) [![Build Status](https://travis-ci.org/RobotsAndPencils/buford.svg?branch=ci)](https://travis-ci.org/RobotsAndPencils/buford) ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ### Documentation
 
@@ -24,11 +24,11 @@ Also see Apple's [Local and Remote Notification Programming Guide][notification]
 
 **Provider** The Buford library is used to create a _provider_ of push notifications.
 
-**Service** Apple provides the push notification service that Buford communications with.
+**Service** Apple's push notification service that Buford communicates with.
 
-**Client** An `http.Client` provides an HTTP/2 client to communication with the APN Service.
+**Client** An `http.Client` provides an HTTP/2 client to communicate with the APN Service.
 
-**Notification** A payload sent to a device token with some headers.
+**Notification** A payload, device token, and headers.
 
 **Device Token** An identifier for an application on a given device.
 
@@ -56,7 +56,8 @@ I am still looking for feedback on the API so it may change. Please copy Buford 
 package main
 
 import (
-	"log"
+	"encoding/json"
+	"fmt"
 
 	"github.com/RobotsAndPencils/buford/certificate"
 	"github.com/RobotsAndPencils/buford/payload"
@@ -64,38 +65,74 @@ import (
 	"github.com/RobotsAndPencils/buford/push"
 )
 
+// set these variables appropriately
+const (
+	filename = "/path/to/certificate.p12"
+	password = ""
+	host = push.Development
+	deviceToken = "c2732227a1d8021cfaf781d71fb2f908c61f5861079a00954a5453f1d0281433"
+)
+
 func main() {
-	// set these variables appropriately
-	filename := "/path/to/certificate.p12"
-	password := ""
-	deviceToken := "c2732227a1d8021cfaf781d71fb2f908c61f5861079a00954a5453f1d0281433"
+	// load a certificate and use it to connect to the APN service:
+	cert, err := certificate.Load(filename, password)
+	exitOnError(err)
 
-	cert, key, err := certificate.Load(filename, password)
-	if err != nil {
-		log.Fatal(err)
-	}
+	client, err := push.NewClient(cert)
+	exitOnError(err)
 
-	client, err := push.NewClient(certificate.TLS(cert, key))
-	if err != nil {
-		log.Fatal(err)
-	}
+	service := push.NewService(client, host)
 
-	service := push.Service{
-		Client: client,
-		Host:   push.Development,
-	}
-
+	// construct a payload to send to the device:
 	p := payload.APS{
 		Alert: payload.Alert{Body: "Hello HTTP/2"},
 		Badge: badge.New(42),
 	}
+	b, err := json.Marshal(p)
+	exitOnError(err)
 
-	id, err := service.Push(deviceToken, nil, p)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// push the notification:
+	id, err := service.Push(deviceToken, nil, b)
+	exitOnError(err)
+
+	fmt.Println("apns-id:", id)
 }
 ```
+
+See `example/push` for the complete listing.
+
+#### Concurrent use
+
+HTTP/2 can send multiple requests over a single connection, but `service.Push` waits for a response before returning. Instead, you can wrap a `Service` in a queue to handle responses independently, allowing you to send multiple notifications at once.
+
+```go
+queue := push.NewQueue(service, workers)
+
+// process responses
+go func() {
+	for {
+		// Response blocks until a response is available
+		log.Println(queue.Response())
+	}
+}()
+
+// send the notifications
+for i := 0; i < number; i++ {
+	queue.Push(deviceToken, nil, b)
+}
+
+// done sending notifications, wait for all responses
+queue.Wait()
+```
+
+It's important to set up a goroutine to handle responses before sending any notifications, otherwise Push will block waiting for room to return a Response.
+
+You can configure the number of workers used to send notifications concurrently, but be aware that a larger number isn't necessarily better, as Apple limits the number of concurrent streams. From the Apple Push Notification documentation:
+
+> "The APNs server allows multiple concurrent streams for each connection. The exact number of streams is based on server load, so do not assume a specific number of streams."
+
+See `example/concurrent/` for a complete listing.
+
 #### Headers
 
 You can specify an ID, expiration, priority, and other parameters via the Headers struct.
@@ -107,7 +144,7 @@ headers := &push.Headers{
 	LowPriority: true,
 }
 
-id, err := service.Push(deviceToken, headers, p)
+id, err := service.Push(deviceToken, headers, b)
 ```
 
 If no ID is specified APNS will generate and return a unique ID. When an expiration is specified, APNS will store and retry sending the notification until that time, otherwise APNS will not store or retry the notification. LowPriority should always be set when sending a ContentAvailable payload.
@@ -123,25 +160,26 @@ p := payload.APS{
 pm := p.Map()
 pm["acme2"] = []string{"bang", "whiz"}
 
-id, err := service.Push(deviceToken, nil, pm)
-```
-
-The Push method will use json.Marshal to serialize whatever you send it.
-
-#### Resend the same payload
-
-Use json.Marshal to serialize your payload once and then send it to multiple device tokens with PushBytes.
-
-```go
-b, err := json.Marshal(p)
+b, err := json.Marshal(pm)
 if err != nil {
-	log.Fatal(err)
+	log.Fatal(b)
 }
 
-id, err := service.PushBytes(deviceToken, nil, b)
+id, err := service.Push(deviceToken, nil, b)
 ```
 
-Whether you use Push or PushBytes, the underlying HTTP/2 connection to APNS will be reused.
+#### Error responses
+
+If `service.Push` or `queue.Response` returns an error, it could be an HTTP error, or it could be an error response from Apple. To access the Reason and HTTP Status code, you must convert the `error` to a `push.Error` as follows:
+
+```go
+if e, ok := err.(*push.Error); ok {
+	switch e.Reason {
+	case push.ErrBadDeviceToken:
+		// handle error
+	}
+}
+```
 
 ### Website Push
 
@@ -154,7 +192,7 @@ pkg := pushpackage.New(w)
 pkg.EncodeJSON("website.json", website)
 pkg.File("icon.iconset/icon_128x128@2x.png", "static/icon_128x128@2x.png")
 // other icons... (required)
-if err := pkg.Sign(cert, privateKey, nil); err != nil {
+if err := pkg.Sign(cert, nil); err != nil {
 	log.Fatal(err)
 }
 ```
@@ -172,3 +210,14 @@ A pass is a signed zip file with a .pkpass extension and a `application/vnd.appl
 See `example/wallet/` and the [Wallet Developer Guide][wallet].
 
 [wallet]: https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/PassKit_PG/index.html
+
+### Related Projects
+
+* [apns2](https://github.com/sideshow/apns2) (Go)
+* [go-apns-server](https://github.com/CleverTap/go-apns-server) (Go mock server)
+* [gorush](https://github.com/appleboy/gorush) (A push notification server written in Go)
+* [Push Encryption](https://github.com/GoogleChrome/push-encryption-go) (Go Web Push for Chrome and Firefox)
+* [Lowdown](https://github.com/alloy/lowdown) (Ruby)
+* [Apnotic](https://github.com/ostinelli/apnotic) (Ruby)
+* [Pigeon](https://github.com/codedge-llc/pigeon) (Elixir, iOS and Android)
+

@@ -40,6 +40,7 @@ func (fh *fholder) labyrinth() CallStack {
 	for {
 		return fh.f()
 	}
+	panic("this line only needed for go 1.0")
 }
 
 func TestTrace(t *testing.T) {
@@ -54,7 +55,7 @@ func TestTrace(t *testing.T) {
 
 	cs := fh.labyrinth()
 
-	lines := []int{50, 41, 55}
+	lines := []int{51, 41, 56}
 
 	for i, line := range lines {
 		if got, want := cs[i].line(), line; got != want {
