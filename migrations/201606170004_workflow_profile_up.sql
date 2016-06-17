@@ -3,4 +3,3 @@ CREATE TABLE IF NOT EXISTS workflow_profile (
   profile_uuid uuid REFERENCES profiles,
   PRIMARY KEY (workflow_uuid, profile_uuid)
 );
-

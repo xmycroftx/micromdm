@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE IF NOT EXISTS devices (
   device_uuid uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   udid text NOT NULL DEFAULT '',
