@@ -1,23 +1,30 @@
-hash: e3e64879babd521567b9ebe3e3de6d33f43eaca8fffa2b0f3bcf6ce0ec62f4c3
-updated: 2016-06-14T10:12:25.349241082-04:00
+hash: d0c19db4992e8f46b70849300c1e3f4635b1ed911fae8f8fbe249f1bf654391a
+updated: 2016-06-17T22:51:33.53676691+10:00
 imports:
+- name: ""
+  version: ""
+  subpackages:
+  - certificate
+  - push
+  - payload
+  - payload/badge
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/fullsailor/pkcs7
-  version: 9ab43480afa35dcb6df2c5b80e5e158f421c03c7
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/garyburd/go-oauth
   version: 719b069913e1151a73ea30d2ea4f90deda3ce234
   subpackages:
   - oauth
 - name: github.com/garyburd/redigo
-  version: b8dc90050f24c1a73a52f107f3f575be67b21b7c
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
   subpackages:
   - redis
   - internal
 - name: github.com/go-kit/kit
-  version: 8e29ecb32abaeb834f62d5b0f1666d45686a49a0
+  version: ""
   vcs: git
   subpackages:
   - endpoint
@@ -26,27 +33,27 @@ imports:
   - metrics/prometheus
   - transport/http
 - name: github.com/go-logfmt/logfmt
-  version: d4327190ff838312623b09bfeb50d7c93c8d9c1d
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/go-stack/stack
-  version: 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/golang/protobuf
-  version: 8616e8ee5e20a1704615e6c8d7afcdac06087a67
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
   subpackages:
   - proto
 - name: github.com/gorilla/context
-  version: aed02d124ae4a0e94fea4541c8effd05bf0c8296
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/gorilla/mux
-  version: 9fa818a44c2bf1396a17f9d5a3c0f6dd39d2ff8e
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/groob/plist
-  version: e9ca5cd129407b401d850bc3248338865a7490ae
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/jmoiron/sqlx
-  version: e4a302b8d3a49ad2790f2232df7fcd668f54366f
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
   subpackages:
   - reflectx
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/lib/pq
-  version: ee1442bda7bd1b6a84e913bdb421cb1874ec629d
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
   subpackages:
   - oid
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -56,11 +63,11 @@ imports:
 - name: github.com/micromdm/dep
   version: 38c81b11544f31c2be14e0b3bcfa12f656fcc709
 - name: github.com/micromdm/mdm
-  version: 156db12f2588e3f9c7f02236f44d0ea6cb4f012a
+  version: da76abf417249cfcc3ab01ea5ccdc9c3c602d162
 - name: github.com/pkg/errors
-  version: 01fa4104b9c248c8945d14d9f128454d5b28d595
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/prometheus/client_golang
-  version: 488edd04dc224ba64c401747cd0a4b5f05dfb234
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
@@ -68,7 +75,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 3a184ff7dfd46b9091030bf2e56c71112b0ddb0e
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -78,23 +85,23 @@ imports:
 - name: github.com/RobotsAndPencils/buford
   version: 2861f2a5612806afe88232539f5e4255d39ae544
   subpackages:
+  - payload/badge
   - certificate
   - push
   - payload
-  - payload/badge
 - name: github.com/rs/cors
-  version: 3ca2b550f6a4333b63c845850f760a7d00412cd6
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/rs/xhandler
-  version: d9d9599b6aaf6a058cb7b1f48291ded2cbd13390
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: github.com/satori/go.uuid
-  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
 - name: golang.org/x/crypto
-  version: f3241ce8505855877cc8a9717bd61a0f7c4ea83c
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
   subpackages:
   - pkcs12
   - pkcs12/internal/rc2
 - name: golang.org/x/net
-  version: 3f122ce3dbbe488b7e6a8bdb26f41edec852a40b
+  version: 9e56e1254ab2d0c19e058df7294869e6edddd391
   subpackages:
   - context
   - http2
