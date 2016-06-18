@@ -83,7 +83,6 @@ func NewDB(driver, conn string, logger kitlog.Logger) (Datastore, error) {
 		if dbError != nil {
 			return nil, errors.Wrap(dbError, "workflow datastore")
 		}
-		// TODO: Migrations
 		return pgStore{DB: db}, nil
 	default:
 		return nil, errors.New("unknown driver")
