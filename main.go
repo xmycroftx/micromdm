@@ -21,6 +21,9 @@ import (
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 	"github.com/rs/cors"
+	"github.com/DavidHuie/gomigrate"
+	"time"
+	"database/sql"
 )
 
 var (
@@ -109,6 +112,35 @@ func main() {
 
 	pushSvc, err := pushService(*flPushCert, *flPushPass)
 	if err != nil {
+		logger.Log("err", err)
+		os.Exit(1)
+	}
+
+	// Run migrations
+	db, err := sql.Open("postgres", *flPGconn)
+	if err != nil {
+		logger.Log("err", err)
+		os.Exit(1)
+	}
+	var dbError error
+	maxAttempts := 20
+	for attempts := 1; attempts <= maxAttempts; attempts++ {
+		dbError = db.Ping()
+		if dbError == nil {
+			break
+		}
+		logger.Log("msg", fmt.Sprintf("could not connect to postgres: %v", dbError))
+		time.Sleep(time.Duration(attempts) * time.Second)
+	}
+	if dbError != nil {
+		logger.Log("err", dbError)
+		os.Exit(1)
+	}
+
+	migrator, _ := gomigrate.NewMigrator(db, gomigrate.Postgres{}, "./migrations")
+	migrationErr := migrator.Migrate()
+
+	if migrationErr != nil {
 		logger.Log("err", err)
 		os.Exit(1)
 	}

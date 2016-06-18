@@ -83,40 +83,9 @@ func NewDB(driver, conn string, logger kitlog.Logger) (Datastore, error) {
 		if dbError != nil {
 			return nil, errors.Wrap(dbError, "workflow datastore")
 		}
-		migrate(db)
+		// TODO: Migrations
 		return pgStore{DB: db}, nil
 	default:
 		return nil, errors.New("unknown driver")
 	}
-}
-
-func migrate(db *sqlx.DB) {
-	schema := `
-	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-	CREATE TABLE IF NOT EXISTS workflows (
-	  workflow_uuid uuid PRIMARY KEY 
-	            DEFAULT uuid_generate_v4(), 
-	  name text UNIQUE NOT NULL CHECK (name <> '')
-	  );
-
-	CREATE TABLE IF NOT EXISTS profiles (
-	  profile_uuid uuid PRIMARY KEY 
-	            DEFAULT uuid_generate_v4(), 
-	  payload_identifier text UNIQUE NOT NULL CHECK (payload_identifier <> ''),
-	  profile_data bytea
-	  );
-
-	CREATE TABLE IF NOT EXISTS workflow_profile (
-		workflow_uuid uuid REFERENCES workflows,
-		profile_uuid uuid REFERENCES profiles,
-		PRIMARY KEY (workflow_uuid, profile_uuid)
-  	  );
-
-	CREATE TABLE IF NOT EXISTS workflow_workflow (
-		workflow_uuid uuid REFERENCES workflows,
-		included_workflow_uuid uuid REFERENCES workflows(workflow_uuid),
-		PRIMARY KEY (workflow_uuid, included_workflow_uuid)
-  	  );`
-
-	db.MustExec(schema)
 }
