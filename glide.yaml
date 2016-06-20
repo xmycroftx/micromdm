@@ -25,10 +25,11 @@ import:
   subpackages:
   - context
 - package: github.com/rs/cors
-- name: github.com/RobotsAndPencils/buford
+- package: github.com/RobotsAndPencils/buford
   version: 2861f2a5612806afe88232539f5e4255d39ae544
   subpackages:
   - certificate
   - push
   - payload
   - payload/badge
+- package: github.com/DavidHuie/gomigrate
