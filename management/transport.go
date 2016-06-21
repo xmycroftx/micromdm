@@ -149,10 +149,7 @@ func decodeShowProfileRequest(_ context.Context, r *http.Request) (interface{}, 
 	if !ok {
 		return nil, errBadRouting
 	}
-	// simple validation
-	if len(uuid) != 36 {
-		return nil, errBadUUID
-	}
+
 	return showProfileRequest{UUID: uuid}, nil
 }
 
@@ -197,10 +194,7 @@ func decodeShowDeviceRequest(_ context.Context, r *http.Request) (interface{}, e
 	if !ok {
 		return nil, errBadRouting
 	}
-	// simple validation
-	if len(uuid) != 36 {
-		return nil, errBadUUID
-	}
+
 	return showDeviceRequest{UUID: uuid}, nil
 }
 
@@ -210,10 +204,7 @@ func decodePushRequest(_ context.Context, r *http.Request) (interface{}, error) 
 	if !ok {
 		return nil, errBadRouting
 	}
-	// simple validation
-	if len(udid) != 36 {
-		return nil, errBadUUID
-	}
+
 	return pushRequest{UDID: udid}, nil
 }
 
@@ -223,10 +214,7 @@ func decodeUpdateDeviceRequest(_ context.Context, r *http.Request) (interface{},
 	if !ok {
 		return nil, errBadRouting
 	}
-	// simple validation
-	if len(deviceUUID) != 36 {
-		return nil, errBadUUID
-	}
+
 	var request = updateDeviceRequest{DeviceUUID: deviceUUID}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err == io.EOF {
