@@ -53,9 +53,8 @@ var (
 	meid
 	)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
-    ON CONFLICT (serial_number)
-    DO UPDATE SET 
-	udid=$1,
+    ON CONFLICT (udid)
+    DO UPDATE SET
 	apple_mdm_topic=$2,
     os_version=$3,
     build_version=$4,
