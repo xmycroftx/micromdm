@@ -81,6 +81,7 @@ type Datastore interface {
 	GetDeviceByUDID(udid string, fields ...string) (*Device, error)
 	GetDeviceByUUID(uuid string, fields ...string) (*Device, error)
 	UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) (error)
+	UpdateDeviceCheckinByUDID(udid string) (error)
 	Devices(params ...interface{}) ([]Device, error)
 	Save(msg string, dev *Device) error
 }
@@ -156,6 +157,14 @@ func (store pgStore) UpdateDeviceQueryResponseByUDID(udid string, responses mdm.
 		responses.MEID,
 		responses.SerialNumber,
 	)
+
+	return err
+}
+
+// Bump the last_checkin timestamp
+func (store pgStore) UpdateDeviceCheckinByUDID(udid string) (error) {
+	stmt := `UPDATE devices SET last_checkin = NOW() WHERE udid = $1`
+	_, err := store.Exec(stmt, udid)
 
 	return err
 }
