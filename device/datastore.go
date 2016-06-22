@@ -75,7 +75,8 @@ var (
 	last_checkin,
 	dep_profile_status,
 	model,
-	workflow_uuid
+	workflow_uuid,
+	device_name
 	FROM devices`
 )
 
