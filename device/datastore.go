@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgres driver
-	"github.com/pkg/errors"
 	"github.com/micromdm/mdm"
-	"encoding/json"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -66,9 +66,12 @@ var (
     meid=$8
 	RETURNING device_uuid;`
 
-	selectDevicesStmt = `SELECT device_uuid, 
+	selectDevicesStmt = `SELECT
+	device_uuid,
 	udid,
-	serial_number, 
+	serial_number,
+	os_version,
+	product_name,
 	dep_profile_status,
 	model,
 	workflow_uuid
@@ -80,8 +83,8 @@ type Datastore interface {
 	New(src string, d *Device) (string, error)
 	GetDeviceByUDID(udid string, fields ...string) (*Device, error)
 	GetDeviceByUUID(uuid string, fields ...string) (*Device, error)
-	UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) (error)
-	UpdateDeviceCheckinByUDID(udid string) (error)
+	UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) error
+	UpdateDeviceCheckinByUDID(udid string) error
 	Devices(params ...interface{}) ([]Device, error)
 	Save(msg string, dev *Device) error
 }
@@ -122,17 +125,17 @@ func (store pgStore) GetDeviceByUUID(uuid string, fields ...string) (*Device, er
 	return &device, sqlx.Get(store, &device, query, uuid)
 }
 
-func (store pgStore) UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) (error) {
+func (store pgStore) UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) error {
 	jsonValue, err := json.Marshal(responses)
 
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 
 	query := `UPDATE devices SET last_query_response = $2 WHERE udid = $1`
 	_, err = store.Exec(query, udid, jsonValue)
 
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 
@@ -162,7 +165,7 @@ func (store pgStore) UpdateDeviceQueryResponseByUDID(udid string, responses mdm.
 }
 
 // Bump the last_checkin timestamp
-func (store pgStore) UpdateDeviceCheckinByUDID(udid string) (error) {
+func (store pgStore) UpdateDeviceCheckinByUDID(udid string) error {
 	stmt := `UPDATE devices SET last_checkin = NOW() WHERE udid = $1`
 	_, err := store.Exec(stmt, udid)
 
@@ -296,4 +299,3 @@ func NewDB(driver, conn string, logger kitlog.Logger) (Datastore, error) {
 		return nil, errors.New("unknown driver")
 	}
 }
-
