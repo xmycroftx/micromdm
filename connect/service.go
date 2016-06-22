@@ -5,12 +5,13 @@ import (
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/device"
 	"github.com/pkg/errors"
+	"golang.org/x/net/context"
 )
 
 // Service defines methods for an MDM service
 type Service interface {
-	Acknowledge(deviceUDID, commandUUID string) (int, error)
-	NextCommand(deviceUDID string) ([]byte, int, error)
+	Acknowledge(ctx context.Context, req mdmConnectRequest) (int, error)
+	NextCommand(ctx context.Context, req mdmConnectRequest) ([]byte, int, error)
 }
 
 // NewService creates a mdm service
@@ -26,13 +27,13 @@ type service struct {
 	commands command.Service
 }
 
-func (svc service) Acknowledge(deviceUDID, commandUUID string) (int, error) {
-	total, err := svc.commands.DeleteCommand(deviceUDID, commandUUID)
+func (svc service) Acknowledge(ctx context.Context, req mdmConnectRequest) (int, error) {
+	total, err := svc.commands.DeleteCommand(req.UDID, req.CommandUUID)
 	if err != nil {
 		return total, err
 	}
 	if total == 0 {
-		total, err = svc.checkRequeue(deviceUDID)
+		total, err = svc.checkRequeue(req.UDID)
 		if err != nil {
 			return total, err
 		}
@@ -41,8 +42,8 @@ func (svc service) Acknowledge(deviceUDID, commandUUID string) (int, error) {
 	return total, nil
 }
 
-func (svc service) NextCommand(deviceUDID string) ([]byte, int, error) {
-	return svc.commands.NextCommand(deviceUDID)
+func (svc service) NextCommand(ctx context.Context, req mdmConnectRequest) ([]byte, int, error) {
+	return svc.commands.NextCommand(req.UDID)
 }
 
 func (svc service) checkRequeue(deviceUDID string) (int, error) {
@@ -62,4 +63,9 @@ func (svc service) checkRequeue(deviceUDID string) (int, error) {
 		return 1, nil
 	}
 	return 0, nil
+}
+
+// Acknowledge Queries sent with DeviceInformation command
+func (svc service) ackQueryResponses() (error) {
+	return nil
 }
