@@ -9,6 +9,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgres driver
 	"github.com/pkg/errors"
+	"github.com/micromdm/mdm"
+	"encoding/json"
 )
 
 var (
@@ -78,6 +80,7 @@ type Datastore interface {
 	New(src string, d *Device) (string, error)
 	GetDeviceByUDID(udid string, fields ...string) (*Device, error)
 	GetDeviceByUUID(uuid string, fields ...string) (*Device, error)
+	UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) (error)
 	Devices(params ...interface{}) ([]Device, error)
 	Save(msg string, dev *Device) error
 }
@@ -116,6 +119,45 @@ func (store pgStore) GetDeviceByUUID(uuid string, fields ...string) (*Device, er
 	s := strings.Join(fields, ", ")
 	query := `SELECT ` + s + ` FROM devices WHERE device_uuid=$1 LIMIT 1`
 	return &device, sqlx.Get(store, &device, query, uuid)
+}
+
+func (store pgStore) UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) (error) {
+	jsonValue, err := json.Marshal(responses)
+
+	if (err != nil) {
+		return err
+	}
+
+	query := `UPDATE devices SET last_query_response = $2 WHERE udid = $1`
+	_, err = store.Exec(query, udid, jsonValue)
+
+	if (err != nil) {
+		return err
+	}
+
+	devicesStmt := `UPDATE devices SET
+	os_version = $2,
+	model = $3,
+	build_version = $4,
+	product_name = $5,
+	imei = $6,
+	meid = $7,
+	serial_number = $8
+	WHERE udid=$1`
+
+	_, err = store.Exec(
+		devicesStmt,
+		udid,
+		responses.OSVersion,
+		responses.Model,
+		responses.BuildVersion,
+		responses.ProductName,
+		responses.IMEI,
+		responses.MEID,
+		responses.SerialNumber,
+	)
+
+	return err
 }
 
 func (store pgStore) New(src string, d *Device) (string, error) {

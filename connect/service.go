@@ -28,6 +28,24 @@ type service struct {
 }
 
 func (svc service) Acknowledge(ctx context.Context, req mdmConnectRequest) (int, error) {
+	var err error
+
+	switch req.RequestType {
+	case "DeviceInformation":
+		err = svc.ackQueryResponses(req)
+		if err != nil {
+			return 0, err
+		}
+	default:
+		// Need to handle the absence of RequestType in IOS8 devices
+		if req.QueryResponses.UDID != "" {
+			err = svc.ackQueryResponses(req)
+			if err != nil {
+				return 0, err
+			}
+		}
+	}
+
 	total, err := svc.commands.DeleteCommand(req.UDID, req.CommandUUID)
 	if err != nil {
 		return total, err
@@ -66,6 +84,6 @@ func (svc service) checkRequeue(deviceUDID string) (int, error) {
 }
 
 // Acknowledge Queries sent with DeviceInformation command
-func (svc service) ackQueryResponses() (error) {
-	return nil
+func (svc service) ackQueryResponses(req mdmConnectRequest) error {
+	return svc.devices.UpdateDeviceQueryResponseByUDID(req.UDID, req.QueryResponses)
 }
