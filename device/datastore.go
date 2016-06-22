@@ -72,6 +72,7 @@ var (
 	serial_number,
 	os_version,
 	product_name,
+	last_checkin,
 	dep_profile_status,
 	model,
 	workflow_uuid

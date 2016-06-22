@@ -38,6 +38,7 @@ type Device struct {
 	DEPProfilePushTime     *time.Time       `json:"dep_profile_push_time,omitempty" db:"dep_profile_push_time"`
 	DEPProfileAssignedDate *time.Time       `json:"dep_profile_assigned_date,omitempty" db:"dep_profile_assigned_date"`
 	DEPProfileAssignedBy   string           `json:"dep_profile_assigned_by,omitempty" db:"dep_profile_assigned_by"`
+	LastCheckin	       *time.Time	`json:"last_checkin" db:"last_checkin"`
 }
 
 // DEPProfileStatus is the status of the DEP Profile
