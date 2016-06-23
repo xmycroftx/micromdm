@@ -10,8 +10,8 @@ import (
 
 // Service defines methods for an MDM service
 type Service interface {
-	Acknowledge(ctx context.Context, req mdmConnectRequest) (int, error)
-	NextCommand(ctx context.Context, req mdmConnectRequest) ([]byte, int, error)
+	Acknowledge(ctx context.Context, req mdm.Response) (int, error)
+	NextCommand(ctx context.Context, req mdm.Response) ([]byte, int, error)
 }
 
 // NewService creates a mdm service
@@ -27,7 +27,7 @@ type service struct {
 	commands command.Service
 }
 
-func (svc service) Acknowledge(ctx context.Context, req mdmConnectRequest) (int, error) {
+func (svc service) Acknowledge(ctx context.Context, req mdm.Response) (int, error) {
 	var err error
 
 	switch req.RequestType {
@@ -60,7 +60,7 @@ func (svc service) Acknowledge(ctx context.Context, req mdmConnectRequest) (int,
 	return total, nil
 }
 
-func (svc service) NextCommand(ctx context.Context, req mdmConnectRequest) ([]byte, int, error) {
+func (svc service) NextCommand(ctx context.Context, req mdm.Response) ([]byte, int, error) {
 	return svc.commands.NextCommand(req.UDID)
 }
 
