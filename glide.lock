@@ -1,5 +1,5 @@
 hash: 9065f050a8e87468098f6df070622f57a29d2de83efebb67363efa781f612080
-updated: 2016-06-20T09:39:15.205205583-04:00
+updated: 2016-06-23T08:26:13.449606435-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -48,7 +48,7 @@ imports:
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/lib/pq
-  version: 55196ec83d60d789e27b2627549bf00974a70084
+  version: e2402a7cd1e57e08a576b94cdfed36ae30366545
   subpackages:
   - oid
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -58,9 +58,9 @@ imports:
 - name: github.com/micromdm/dep
   version: 38c81b11544f31c2be14e0b3bcfa12f656fcc709
 - name: github.com/micromdm/mdm
-  version: b6ea880dd4375975f0887f5b1346ea67896e2621
+  version: 3848d523aa33c6a9bd256c581c7ebd97047f0944
 - name: github.com/pkg/errors
-  version: 0bc61eb85b3cab5d83c9432263916d5df58d9855
+  version: cbd18b5440315aa74a17dee2e50b67675b872b49
 - name: github.com/prometheus/client_golang
   version: 488edd04dc224ba64c401747cd0a4b5f05dfb234
   subpackages:
@@ -96,7 +96,7 @@ imports:
   - pkcs12
   - pkcs12/internal/rc2
 - name: golang.org/x/net
-  version: 8bf2b39827dbadfd566c4fae7a8790d12be8b23c
+  version: bc3663df0ac92f928d419e31e0d2af22e683a5a2
   subpackages:
   - context
   - http2
