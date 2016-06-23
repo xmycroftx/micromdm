@@ -53,7 +53,7 @@ var (
 	meid
 	)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
-    ON CONFLICT (udid)
+    ON CONFLICT (udid, serial_number)
     DO UPDATE SET
 	apple_mdm_topic=$2,
     os_version=$3,
