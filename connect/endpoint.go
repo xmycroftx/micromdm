@@ -32,7 +32,7 @@ func makeConnectEndpoint(svc Service) endpoint.Endpoint {
 		var err error
 		switch req.Status {
 		case "Acknowledged":
-			total, err := svc.Acknowledge(ctx, req)
+			total, err := svc.Acknowledge(ctx, request.(mdm.Response))
 			if err != nil {
 				return mdmConnectResponse{Err: err}, nil
 			}
@@ -40,14 +40,14 @@ func makeConnectEndpoint(svc Service) endpoint.Endpoint {
 				return mdmConnectResponse{}, nil
 			}
 			if total != 0 {
-				next, _, err := svc.NextCommand(ctx, req)
+				next, _, err := svc.NextCommand(ctx, request.(mdm.Response))
 				if err != nil {
 					return mdmConnectResponse{Err: err}, nil
 				}
 				return mdmConnectResponse{payload: next}, nil
 			}
 		case "Idle":
-			next, total, err := svc.NextCommand(ctx, req)
+			next, total, err := svc.NextCommand(ctx, request.(mdm.Response))
 			if err != nil {
 				return mdmConnectResponse{Err: err}, nil
 			}

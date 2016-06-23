@@ -1,12 +1,12 @@
 package connect
 
 import (
-	"time"
 	"github.com/micromdm/mdm"
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/device"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
+	"time"
 )
 
 // Service defines methods for an MDM service
@@ -87,9 +87,18 @@ func (svc service) ackQueryResponses(req mdm.Response) error {
 		return err
 	}
 
-	existing.LastCheckin = time.Now()
+	now := time.Now()
+	existing.LastCheckin = &now
 	existing.LastQueryResponse = req.QueryResponses
 
+	existing.ProductName = req.QueryResponses.ProductName
+	existing.BuildVersion = req.QueryResponses.BuildVersion
+	existing.DeviceName = req.QueryResponses.DeviceName
+	existing.IMEI = req.QueryResponses.IMEI
+	existing.MEID = req.QueryResponses.MEID
+	existing.Model = req.QueryResponses.Model
+	existing.OSVersion = req.QueryResponses.OSVersion
+	existing.SerialNumber = req.QueryResponses.SerialNumber
 
-	return svc.devices.UpdateDeviceQueryResponseByUDID(req.UDID, req.QueryResponses)
+	return svc.devices.Save("queryResponses", existing)
 }

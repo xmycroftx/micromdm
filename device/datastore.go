@@ -85,8 +85,6 @@ type Datastore interface {
 	New(src string, d *Device) (string, error)
 	GetDeviceByUDID(udid string, fields ...string) (*Device, error)
 	GetDeviceByUUID(uuid string, fields ...string) (*Device, error)
-	UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) error
-	UpdateDeviceCheckinByUDID(udid string) error
 	Devices(params ...interface{}) ([]Device, error)
 	Save(msg string, dev *Device) error
 }
@@ -125,53 +123,6 @@ func (store pgStore) GetDeviceByUUID(uuid string, fields ...string) (*Device, er
 	s := strings.Join(fields, ", ")
 	query := `SELECT ` + s + ` FROM devices WHERE device_uuid=$1 LIMIT 1`
 	return &device, sqlx.Get(store, &device, query, uuid)
-}
-
-func (store pgStore) UpdateDeviceQueryResponseByUDID(udid string, responses mdm.QueryResponses) error {
-	jsonValue, err := json.Marshal(responses)
-
-	if err != nil {
-		return err
-	}
-
-	query := `UPDATE devices SET last_query_response = $2 WHERE udid = $1`
-	_, err = store.Exec(query, udid, jsonValue)
-
-	if err != nil {
-		return err
-	}
-
-	devicesStmt := `UPDATE devices SET
-	os_version = $2,
-	model = $3,
-	build_version = $4,
-	product_name = $5,
-	imei = $6,
-	meid = $7,
-	serial_number = $8
-	WHERE udid=$1`
-
-	_, err = store.Exec(
-		devicesStmt,
-		udid,
-		responses.OSVersion,
-		responses.Model,
-		responses.BuildVersion,
-		responses.ProductName,
-		responses.IMEI,
-		responses.MEID,
-		responses.SerialNumber,
-	)
-
-	return err
-}
-
-// Bump the last_checkin timestamp
-func (store pgStore) UpdateDeviceCheckinByUDID(udid string) error {
-	stmt := `UPDATE devices SET last_checkin = NOW() WHERE udid = $1`
-	_, err := store.Exec(stmt, udid)
-
-	return err
 }
 
 func (store pgStore) New(src string, d *Device) (string, error) {
@@ -242,10 +193,21 @@ func (store pgStore) Save(msg string, dev *Device) error {
 		apple_mdm_token=:apple_mdm_token,
 		mdm_enrolled=:mdm_enrolled
 		WHERE device_uuid=:device_uuid`
-
 	case "checkout":
 		stmt = `UPDATE devices SET
 		mdm_enrolled=:mdm_enrolled
+		WHERE device_uuid=:device_uuid`
+	case "queryResponses":
+		stmt = `UPDATE devices SET
+		last_query_response=:last_query_response,
+		device_name=:device_name,
+		serial_number=:serial_number,
+		model=:model,
+		product_name=:product_name,
+		imei=:imei,
+		meid=:meid,
+		os_version=:os_version,
+		build_version=:build_version
 		WHERE device_uuid=:device_uuid`
 	default:
 		return errors.New("device: unsupported update msg")
