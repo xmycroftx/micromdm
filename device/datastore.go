@@ -5,11 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgres driver
-	"github.com/micromdm/mdm"
 	"github.com/pkg/errors"
 )
 
