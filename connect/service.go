@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"time"
 	"github.com/micromdm/mdm"
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/device"
@@ -80,6 +81,15 @@ func (svc service) checkRequeue(deviceUDID string) (int, error) {
 }
 
 // Acknowledge Queries sent with DeviceInformation command
-func (svc service) ackQueryResponses(req mdmConnectRequest) error {
+func (svc service) ackQueryResponses(req mdm.Response) error {
+	existing, err := svc.devices.GetDeviceByUDID(req.UDID)
+	if err != nil {
+		return err
+	}
+
+	existing.LastCheckin = time.Now()
+	existing.LastQueryResponse = req.QueryResponses
+
+
 	return svc.devices.UpdateDeviceQueryResponseByUDID(req.UDID, req.QueryResponses)
 }
