@@ -28,19 +28,15 @@ type service struct {
 }
 
 func (svc service) Acknowledge(ctx context.Context, req mdm.Response) (int, error) {
-	var err error
-
 	switch req.RequestType {
 	case "DeviceInformation":
-		err = svc.ackQueryResponses(req)
-		if err != nil {
+		if err := svc.ackQueryResponses(req); err != nil {
 			return 0, err
 		}
 	default:
 		// Need to handle the absence of RequestType in IOS8 devices
 		if req.QueryResponses.UDID != "" {
-			err = svc.ackQueryResponses(req)
-			if err != nil {
+			if err := svc.ackQueryResponses(req); err != nil {
 				return 0, err
 			}
 		}
