@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"encoding/json"
 	"github.com/micromdm/mdm"
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/device"
@@ -89,7 +90,11 @@ func (svc service) ackQueryResponses(req mdm.Response) error {
 
 	now := time.Now()
 	existing.LastCheckin = &now
-	existing.LastQueryResponse = req.QueryResponses
+	existing.LastQueryResponse, err = json.Marshal(req.QueryResponses)
+
+	if err != nil {
+		return err
+	}
 
 	existing.ProductName = req.QueryResponses.ProductName
 	existing.BuildVersion = req.QueryResponses.BuildVersion
