@@ -1,3 +1,8 @@
+UPDATE devices SET last_query_response = '{}' WHERE last_query_response IS NULL;
+UPDATE devices SET build_version = '' WHERE build_version IS NULL;
+UPDATE devices SET product_name = '' WHERE product_name IS NULL;
+UPDATE devices SET os_version = '' WHERE os_version IS NULL;
+
 ALTER TABLE devices
     ALTER COLUMN last_query_response SET DEFAULT '{}',
     ALTER COLUMN build_version SET DEFAULT '',
