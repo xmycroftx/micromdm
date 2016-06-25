@@ -105,6 +105,15 @@ func (p SerialNumber) where() string {
 	return fmt.Sprintf("serial_number = '%s'", p.SerialNumber)
 }
 
+// UDID is a filter
+type UDID struct {
+	UDID string
+}
+
+func (p UDID) where() string {
+	return fmt.Sprintf("udid = '%s'", p.UDID)
+}
+
 type pgStore struct {
 	*sqlx.DB
 }
