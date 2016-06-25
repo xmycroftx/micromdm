@@ -83,7 +83,7 @@ func (svc service) checkRequeue(deviceUDID string) (int, error) {
 
 // Acknowledge Queries sent with DeviceInformation command
 func (svc service) ackQueryResponses(req mdm.Response) error {
-	existing, err := svc.devices.GetDeviceByUDID(req.UDID)
+	existing, err := svc.devices.GetDeviceByUDID(req.UDID, []string{"device_uuid", "serial_number"}...)
 	if err != nil {
 		return err
 	}
