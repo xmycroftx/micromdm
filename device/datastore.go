@@ -238,7 +238,7 @@ func addWhereFilters(stmt string, params ...interface{}) string {
 	}
 
 	if len(where) != 0 {
-		whereFilter := strings.Join(where, ",")
+		whereFilter := strings.Join(where, " OR ")
 		stmt = fmt.Sprintf("%s WHERE %s", stmt, whereFilter)
 	}
 	return stmt

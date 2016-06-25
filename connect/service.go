@@ -83,10 +83,20 @@ func (svc service) checkRequeue(deviceUDID string) (int, error) {
 
 // Acknowledge Queries sent with DeviceInformation command
 func (svc service) ackQueryResponses(req mdm.Response) error {
-	existing, err := svc.devices.GetDeviceByUDID(req.UDID, []string{"device_uuid", "serial_number"}...)
+	devices, err := svc.devices.Devices(
+		device.SerialNumber{SerialNumber: req.QueryResponses.SerialNumber},
+		device.UDID{UDID: req.UDID},
+	)
+
 	if err != nil {
 		return err
 	}
+
+	if len(devices) > 1 {
+		return errors.New("Expected a single query result for device, got more than one.")
+	}
+
+	existing := devices[0]
 
 	now := time.Now()
 	existing.LastCheckin = &now
@@ -105,5 +115,5 @@ func (svc service) ackQueryResponses(req mdm.Response) error {
 	existing.OSVersion = req.QueryResponses.OSVersion
 	existing.SerialNumber = req.QueryResponses.SerialNumber
 
-	return svc.devices.Save("queryResponses", existing)
+	return svc.devices.Save("queryResponses", &existing)
 }
