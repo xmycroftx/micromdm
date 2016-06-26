@@ -93,7 +93,7 @@ func (svc service) ackQueryResponses(req mdm.Response) error {
 	}
 
 	if len(devices) > 1 {
-		return errors.New("Expected a single query result for device, got more than one.")
+		return errors.New("expected a single query result for device, got more than one.")
 	}
 
 	existing := devices[0]
