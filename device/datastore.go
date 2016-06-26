@@ -177,7 +177,7 @@ func (store pgStore) New(src string, d *Device) (string, error) {
 
 func (store pgStore) Devices(params ...interface{}) ([]Device, error) {
 	stmt := selectDevicesStmt
-	stmt = addWhereFilters(stmt, params...)
+	stmt = addWhereFilters(stmt, "OR", params...)
 	var devices []Device
 	err := store.Select(&devices, stmt)
 	if err != nil {
@@ -229,7 +229,7 @@ type whereer interface {
 }
 
 // add WHERE clause from params
-func addWhereFilters(stmt string, params ...interface{}) string {
+func addWhereFilters(stmt string, separator string, params ...interface{}) string {
 	var where []string
 	for _, param := range params {
 		if f, ok := param.(whereer); ok {
@@ -238,7 +238,7 @@ func addWhereFilters(stmt string, params ...interface{}) string {
 	}
 
 	if len(where) != 0 {
-		whereFilter := strings.Join(where, " OR ")
+		whereFilter := strings.Join(where, " "+separator+" ")
 		stmt = fmt.Sprintf("%s WHERE %s", stmt, whereFilter)
 	}
 	return stmt
