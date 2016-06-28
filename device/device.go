@@ -7,19 +7,20 @@ import (
 
 	"github.com/micromdm/dep"
 	//"github.com/micromdm/mdm"
+	"database/sql"
 )
 
 // Device represents an iOS or OS X Computer
 type Device struct {
 	// Primary key is UUID
-	UUID         string `json:"uuid" db:"device_uuid"`
-	UDID         string `json:"udid,omitempty"`
-	SerialNumber string `json:"serial_number,omitempty" db:"serial_number,omitempty"`
-	OSVersion    string `json:"os_version,omitempty" db:"os_version,omitempty"`
-	BuildVersion string `json:"build_version,omitempty" db:"build_version,omitempty"`
-	ProductName  string `json:"product_name,omitempty" db:"product_name,omitempty"`
-	IMEI         string `json:"imei,omitempty" db:"imei,omitempty"`
-	MEID         string `json:"meid,omitempty" db:"meid,omitempty"`
+	UUID         string         `json:"uuid" db:"device_uuid"`
+	UDID         sql.NullString `json:"udid,omitempty"`
+	SerialNumber sql.NullString `json:"serial_number,omitempty" db:"serial_number,omitempty"`
+	OSVersion    string         `json:"os_version,omitempty" db:"os_version,omitempty"`
+	BuildVersion string         `json:"build_version,omitempty" db:"build_version,omitempty"`
+	ProductName  string         `json:"product_name,omitempty" db:"product_name,omitempty"`
+	IMEI         string         `json:"imei,omitempty" db:"imei,omitempty"`
+	MEID         string         `json:"meid,omitempty" db:"meid,omitempty"`
 	//Apple MDM Protocol Topic
 	MDMTopic               string           `json:"mdm_topic,omitempty" db:"apple_mdm_topic,omitempty"`
 	PushMagic              string           `json:"push_magic,omitempty" db:"apple_push_magic,omitempty"`
