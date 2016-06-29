@@ -8,3 +8,6 @@ ALTER TABLE devices
   ALTER COLUMN udid SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS udid_serial_idx ON devices (udid, serial_number);
+
+ALTER TABLE devices
+  ALTER COLUMN udid SET DEFAULT '';

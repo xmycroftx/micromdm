@@ -84,8 +84,11 @@ func (status *DEPProfileStatus) Scan(value interface{}) error {
 
 // NewFromDEP returns a device from DEP response
 func NewFromDEP(dd dep.Device) *Device {
+	var SerialNumber sql.NullString
+	SerialNumber.Scan(dd.SerialNumber)
+
 	return &Device{
-		SerialNumber:           dd.SerialNumber,
+		SerialNumber:           SerialNumber,
 		Model:                  dd.Model,
 		Description:            dd.Description,
 		Color:                  dd.Color,

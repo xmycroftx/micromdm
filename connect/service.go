@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"database/sql"
 	"encoding/json"
 	"github.com/micromdm/mdm"
 	"github.com/micromdm/micromdm/command"
@@ -113,7 +114,7 @@ func (svc service) ackQueryResponses(req mdm.Response) error {
 	existing.MEID = req.QueryResponses.MEID
 	existing.Model = req.QueryResponses.Model
 	existing.OSVersion = req.QueryResponses.OSVersion
-	existing.SerialNumber = req.QueryResponses.SerialNumber
+	existing.SerialNumber = sql.NullString{req.QueryResponses.SerialNumber, true}
 
 	return svc.devices.Save("queryResponses", &existing)
 }

@@ -7,5 +7,8 @@ ALTER TABLE devices
 UPDATE devices SET udid = NULL WHERE udid = '';
 UPDATE devices SET serial_number = NULL WHERE serial_number = '';
 
+ALTER TABLE devices
+    ALTER COLUMN udid DROP DEFAULT;
+
 CREATE UNIQUE INDEX IF NOT EXISTS serial_idx ON devices (serial_number);
 CREATE UNIQUE INDEX IF NOT EXISTS udid_idx ON devices (udid);
