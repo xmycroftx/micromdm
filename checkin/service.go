@@ -40,8 +40,14 @@ type service struct {
 
 func (svc service) Authenticate(cmd mdm.CheckinCommand) error {
 	var udid, serialNumber device.JsonNullString
-	udid.Scan(cmd.UDID)
-	serialNumber.Scan(cmd.SerialNumber)
+
+	if err := udid.Scan(cmd.UDID); err != nil {
+		return err
+	}
+
+	if err := serialNumber.Scan(cmd.SerialNumber); err != nil {
+		return err
+	}
 
 	dev := &device.Device{
 		UDID:         udid,
