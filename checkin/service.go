@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"database/sql"
 	"github.com/micromdm/mdm"
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/device"
@@ -40,9 +39,13 @@ type service struct {
 }
 
 func (svc service) Authenticate(cmd mdm.CheckinCommand) error {
+	var udid, serialNumber device.JsonNullString
+	udid.Scan(cmd.UDID)
+	serialNumber.Scan(cmd.SerialNumber)
+
 	dev := &device.Device{
-		UDID:         sql.NullString{cmd.UDID, true},
-		SerialNumber: sql.NullString{cmd.SerialNumber, true},
+		UDID:         udid,
+		SerialNumber: serialNumber,
 		OSVersion:    cmd.OSVersion,
 		BuildVersion: cmd.BuildVersion,
 		ProductName:  cmd.ProductName,

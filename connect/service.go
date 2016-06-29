@@ -1,7 +1,6 @@
 package connect
 
 import (
-	"database/sql"
 	"encoding/json"
 	"github.com/micromdm/mdm"
 	"github.com/micromdm/micromdm/command"
@@ -107,6 +106,9 @@ func (svc service) ackQueryResponses(req mdm.Response) error {
 		return err
 	}
 
+	var serialNumber device.JsonNullString
+	serialNumber.Scan(req.QueryResponses.SerialNumber)
+
 	existing.ProductName = req.QueryResponses.ProductName
 	existing.BuildVersion = req.QueryResponses.BuildVersion
 	existing.DeviceName = req.QueryResponses.DeviceName
@@ -114,7 +116,7 @@ func (svc service) ackQueryResponses(req mdm.Response) error {
 	existing.MEID = req.QueryResponses.MEID
 	existing.Model = req.QueryResponses.Model
 	existing.OSVersion = req.QueryResponses.OSVersion
-	existing.SerialNumber = sql.NullString{req.QueryResponses.SerialNumber, true}
+	existing.SerialNumber = serialNumber
 
 	return svc.devices.Save("queryResponses", &existing)
 }

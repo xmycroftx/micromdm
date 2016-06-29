@@ -10,12 +10,24 @@ import (
 	"database/sql"
 )
 
+type JsonNullString struct {
+	sql.NullString
+}
+
+func (ns *JsonNullString) MarshalJSON() ([]byte, error) {
+	if ns.Valid {
+		return []byte("\"" + ns.String + "\""), nil
+	}
+
+	return []byte("null"), nil
+}
+
 // Device represents an iOS or OS X Computer
 type Device struct {
 	// Primary key is UUID
 	UUID         string         `json:"uuid" db:"device_uuid"`
-	UDID         sql.NullString `json:"udid,omitempty"`
-	SerialNumber sql.NullString `json:"serial_number,omitempty" db:"serial_number,omitempty"`
+	UDID         JsonNullString `json:"udid,omitempty"`
+	SerialNumber JsonNullString `json:"serial_number,omitempty" db:"serial_number,omitempty"`
 	OSVersion    string         `json:"os_version,omitempty" db:"os_version,omitempty"`
 	BuildVersion string         `json:"build_version,omitempty" db:"build_version,omitempty"`
 	ProductName  string         `json:"product_name,omitempty" db:"product_name,omitempty"`
@@ -84,7 +96,7 @@ func (status *DEPProfileStatus) Scan(value interface{}) error {
 
 // NewFromDEP returns a device from DEP response
 func NewFromDEP(dd dep.Device) *Device {
-	var SerialNumber sql.NullString
+	var SerialNumber JsonNullString
 	SerialNumber.Scan(dd.SerialNumber)
 
 	return &Device{
