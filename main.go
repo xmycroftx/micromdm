@@ -14,6 +14,7 @@ import (
 	"github.com/RobotsAndPencils/buford/push"
 	"github.com/go-kit/kit/log"
 	"github.com/micromdm/dep"
+	"github.com/micromdm/micromdm/applications"
 	"github.com/micromdm/micromdm/checkin"
 	"github.com/micromdm/micromdm/command"
 	"github.com/micromdm/micromdm/connect"
@@ -187,17 +188,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	appsDB, err := applications.NewDB(
+		"postgres",
+		*flPGconn,
+		logger,
+	)
+	if err != nil {
+		logger.Log("err", err)
+		os.Exit(1)
+	}
+
 	dc := depClient(logger, *flDEPCK, *flDEPCS, *flDEPAT, *flDEPAS, *flDEPServerURL, *flDEPsim)
-	mgmtSvc := management.NewService(deviceDB, workflowDB, dc, pushSvc)
+	mgmtSvc := management.NewService(deviceDB, workflowDB, dc, pushSvc, appsDB)
 	commandSvc := command.NewService(commandDB)
 	checkinSvc := checkin.NewService(deviceDB, mgmtSvc, commandSvc, enrollmentProfile)
 	connectSvc := connect.NewService(deviceDB, commandSvc)
+	connectSvc := connect.NewService(deviceDB, appsDB, commandSvc)
+	enrollSvc, _ := enroll.NewService(*flPushCert, *flPushPass, *flTLSCACert, *flSCEPURL, *flURL)
 
 	httpLogger := log.NewContext(logger).With("component", "http")
 	managementHandler := management.ServiceHandler(ctx, mgmtSvc, httpLogger)
 	commandHandler := command.ServiceHandler(ctx, commandSvc, httpLogger)
 	checkinHandler := checkin.ServiceHandler(ctx, checkinSvc, httpLogger)
 	connectHandler := connect.ServiceHandler(ctx, connectSvc, httpLogger)
+	enrollHandler := enroll.ServiceHandler(ctx, enrollSvc, httpLogger)
 
 	mux := http.NewServeMux()
 
