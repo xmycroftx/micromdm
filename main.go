@@ -57,6 +57,7 @@ func main() {
 		flPushCert      = flag.String("push-cert", envString("MICROMDM_PUSH_CERT", ""), "path to push certificate")
 		flPushPass      = flag.String("push-pass", envString("MICROMDM_PUSH_PASS", ""), "push certificate password")
 		flEnrollment    = flag.String("profile", envString("MICROMDM_ENROLL_PROFILE", ""), "path to enrollment profile")
+		flDEP           = flag.Bool("dep", envBool("MICROMDM_USE_DEP"), "use DEP")
 		flDEPCK         = flag.String("dep-consumer-key", envString("DEP_CONSUMER_KEY", ""), "dep consumer key")
 		flDEPCS         = flag.String("dep-consumer-secret", envString("DEP_CONSUMER_SECRET", ""), "dep consumer secret")
 		flDEPAT         = flag.String("dep-access-token", envString("DEP_ACCESS_TOKEN", ""), "dep access token")
@@ -211,8 +212,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	dc := depClient(logger, *flDEPCK, *flDEPCS, *flDEPAT, *flDEPAS, *flDEPServerURL, *flDEPsim)
-	mgmtSvc := management.NewService(deviceDB, workflowDB, dc, pushSvc, appsDB, certsDB)
+	var mgmtSvc management.Service
+	if *flDEP == true {
+		logger.Log("info", "DEP support enabled")
+		dc := depClient(logger, *flDEPCK, *flDEPCS, *flDEPAT, *flDEPAS, *flDEPServerURL, *flDEPsim)
+		mgmtSvc = management.NewService(deviceDB, workflowDB, dc, pushSvc, appsDB, certsDB)
+	} else {
+		logger.Log("info", "DEP support disabled")
+		mgmtSvc = management.NewService(deviceDB, workflowDB, nil, pushSvc, appsDB, certsDB)
+
+	}
+
 	commandSvc := command.NewService(commandDB)
 	checkinSvc := checkin.NewService(deviceDB, mgmtSvc, commandSvc, enrollmentProfile)
 	connectSvc := connect.NewService(deviceDB, appsDB, certsDB, commandSvc)
@@ -270,15 +280,14 @@ func main() {
 }
 
 func depClient(logger log.Logger, consumerKey, consumerSecret, accessToken, accessSecret, serverURL string, depsim bool) dep.Client {
-	depsimDefault := &dep.Config{
-		ConsumerKey:    "CK_48dd68d198350f51258e885ce9a5c37ab7f98543c4a697323d75682a6c10a32501cb247e3db08105db868f73f2c972bdb6ae77112aea803b9219eb52689d42e6",
-		ConsumerSecret: "CS_34c7b2b531a600d99a0e4edcf4a78ded79b86ef318118c2f5bcfee1b011108c32d5302df801adbe29d446eb78f02b13144e323eb9aad51c79f01e50cb45c3a68",
-		AccessToken:    "AT_927696831c59ba510cfe4ec1a69e5267c19881257d4bca2906a99d0785b785a6f6fdeb09774954fdd5e2d0ad952e3af52c6d8d2f21c924ba0caf4a031c158b89",
-		AccessSecret:   "AS_c31afd7a09691d83548489336e8ff1cb11b82b6bca13f793344496a556b1f4972eaff4dde6deb5ac9cf076fdfa97ec97699c34d515947b9cf9ed31c99dded6ba",
-	}
 	var config *dep.Config
 	if depsim {
-		config = depsimDefault
+		config = &dep.Config{
+			ConsumerKey:    "CK_48dd68d198350f51258e885ce9a5c37ab7f98543c4a697323d75682a6c10a32501cb247e3db08105db868f73f2c972bdb6ae77112aea803b9219eb52689d42e6",
+			ConsumerSecret: "CS_34c7b2b531a600d99a0e4edcf4a78ded79b86ef318118c2f5bcfee1b011108c32d5302df801adbe29d446eb78f02b13144e323eb9aad51c79f01e50cb45c3a68",
+			AccessToken:    "AT_927696831c59ba510cfe4ec1a69e5267c19881257d4bca2906a99d0785b785a6f6fdeb09774954fdd5e2d0ad952e3af52c6d8d2f21c924ba0caf4a031c158b89",
+			AccessSecret:   "AS_c31afd7a09691d83548489336e8ff1cb11b82b6bca13f793344496a556b1f4972eaff4dde6deb5ac9cf076fdfa97ec97699c34d515947b9cf9ed31c99dded6ba",
+		}
 	} else {
 		if checkEmptyArgs(consumerKey, consumerSecret, accessToken, accessSecret) {
 			logger.Log("err", "must specify DEP server credentials")
@@ -302,7 +311,6 @@ func depClient(logger log.Logger, consumerKey, consumerSecret, accessToken, acce
 	if err != nil {
 		logger.Log("err", err)
 		os.Exit(1)
-
 	}
 
 	return client
