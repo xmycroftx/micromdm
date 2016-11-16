@@ -1,6 +1,11 @@
 package app
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/asn1"
+	"encoding/pem"
+	"errors"
 	"io/ioutil"
 
 	pushcertificate "github.com/RobotsAndPencils/buford/certificate"
@@ -20,6 +25,8 @@ import (
 	"github.com/micromdm/micromdm/enroll"
 	"github.com/micromdm/micromdm/management"
 	"github.com/micromdm/micromdm/workflow"
+
+	"golang.org/x/crypto/pkcs12"
 )
 
 // setupServices uses the values from the config to set up the various components
@@ -33,6 +40,7 @@ func setupServices(config *Config, logger log.Logger) (*serviceManager, error) {
 	sm.setupWorkflowDatastore()
 	sm.setupCertificateDatastore()
 
+	sm.loadPushCerts()
 	sm.setupPushService()
 
 	sm.setupCommandService()
@@ -55,6 +63,7 @@ type serviceManager struct {
 	ApplicationDatastore application.Datastore
 
 	PushService *push.Service
+	pushServiceCert
 
 	CommandService    command.Service
 	ManagementService management.Service
@@ -68,15 +77,80 @@ type serviceManager struct {
 	err    error
 }
 
+type pushServiceCert struct {
+	*x509.Certificate
+	PrivateKey interface{}
+}
+
+func (s *serviceManager) loadPushCerts() {
+	if s.err != nil {
+		return
+	}
+
+	if s.APNS.PrivateKeyPath == "" {
+		var pkcs12Data []byte
+		pkcs12Data, s.err = ioutil.ReadFile(s.APNS.CertificatePath)
+		if s.err != nil {
+			return
+		}
+		s.pushServiceCert.PrivateKey, s.pushServiceCert.Certificate, s.err = pkcs12.Decode(pkcs12Data, s.APNS.PrivateKeyPass)
+		return
+	}
+
+	var pemData []byte
+	pemData, s.err = ioutil.ReadFile(s.APNS.CertificatePath)
+	if s.err != nil {
+		return
+	}
+
+	pemBlock, _ := pem.Decode(pemData)
+	if pemBlock == nil {
+		s.err = errors.New("invalid PEM data for cert")
+		return
+	}
+	s.pushServiceCert.Certificate, s.err = x509.ParseCertificate(pemBlock.Bytes)
+	if s.err != nil {
+		return
+	}
+
+	pemData, s.err = ioutil.ReadFile(s.APNS.PrivateKeyPath)
+	if s.err != nil {
+		return
+	}
+
+	pemBlock, _ = pem.Decode(pemData)
+	if pemBlock == nil {
+		s.err = errors.New("invalid PEM data for privkey")
+		return
+	}
+	s.pushServiceCert.PrivateKey, s.err = x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+}
+
+var oidASN1UserID = asn1.ObjectIdentifier{0, 9, 2342, 19200300, 100, 1, 1}
+
+func topicFromCert(cert *x509.Certificate) (string, error) {
+	for _, v := range cert.Subject.Names {
+		if v.Type.Equal(oidASN1UserID) {
+			return v.Value.(string), nil
+		}
+	}
+
+	return "", errors.New("Could not find Push Topic (UserID OID) in certificate")
+}
+
 func (s *serviceManager) setupEnrollmentService() {
 	if s.err != nil {
+		return
+	}
+	pushTopic, err := topicFromCert(s.pushServiceCert.Certificate)
+	if err != nil {
+		s.err = err
 		return
 	}
 	// TODO: clean up order of inputs. Maybe pass *SCEPConfig as an arg?
 	// but if you do, the packages are coupled, better not.
 	s.EnrollmentService, s.err = enroll.NewService(
-		s.APNS.CertificatePath,
-		s.APNS.PrivateKeyPass,
+		pushTopic,
 		s.Enrollment.CACertPath,
 		s.SCEP.RemoteURL,
 		s.SCEP.Challenge,
@@ -155,15 +229,10 @@ func (s *serviceManager) setupPushService() {
 	if s.err != nil {
 		return
 	}
-	cert, key, err := pushcertificate.Load(
-		s.APNS.CertificatePath,
-		s.APNS.PrivateKeyPass,
-	)
-	if err != nil {
-		s.err = err
-		return
-	}
-	client, err := push.NewClient(pushcertificate.TLS(cert, key))
+	client, err := push.NewClient(pushcertificate.TLS(
+		s.pushServiceCert.Certificate,
+		s.pushServiceCert.PrivateKey.(*rsa.PrivateKey),
+	))
 	if err != nil {
 		s.err = err
 		return
