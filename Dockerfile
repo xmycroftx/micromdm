@@ -1,9 +1,24 @@
-FROM alpine:3.3
+FROM golang:latest as builder
 
-ENV MICROMDM_VERSION=v0.1.0.1-dev
-RUN apk --no-cache add curl && \
-    curl -L https://github.com/micromdm/micromdm/releases/download/${MICROMDM_VERSION}/micromdm-linux-amd64 -o /micromdm && \
-    chmod a+x /micromdm && \
-    apk del curl
+WORKDIR /go/src/github.com/micromdm/micromdm/
 
-CMD ["/micromdm"]
+ENV CGO_ENABLED=0 \
+	GOARCH=amd64 \
+	GOOS=linux
+
+COPY . .
+
+RUN make deps
+RUN make
+
+
+FROM alpine:latest
+
+RUN apk --update add ca-certificates
+
+COPY --from=builder /go/src/github.com/micromdm/micromdm/build/linux/micromdm /usr/bin/
+COPY --from=builder /go/src/github.com/micromdm/micromdm/build/linux/mdmctl /usr/bin/
+
+EXPOSE 80 443
+VOLUME ["/var/db/micromdm"]
+CMD ["micromdm", "serve"]
